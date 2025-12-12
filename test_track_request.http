@@ -1,0 +1,23 @@
+### Track Concept Evolution - Transformer Paper
+# This request tracks the evolution of the transformer concept starting from
+# the famous "Attention Is All You Need" paper (1706.03762)
+POST http://localhost:8000/api/track
+Content-Type: application/json
+
+{
+  "seed_paper_ids": ["1706.03762"],
+  "end_date": "2017-12-31",
+  "window_months": 6,
+  "max_papers_per_window": 200
+}
+
+### Alternative: Track with different parameters
+POST http://localhost:8000/api/track
+Content-Type: application/json
+
+{
+  "seed_paper_ids": ["1706.03762"],
+  "end_date": "2018-06-30",
+  "window_months": 3,
+  "max_papers_per_window": 100
+}
