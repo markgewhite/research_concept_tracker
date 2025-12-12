@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings with Kalman filter parameters"""
 
     # Embedding configuration
-    embedding_model: str = "Qwen/Qwen2.5-Embedding"
+    embedding_model: str = "Qwen/Qwen3-Embedding-0.6B"
     cache_dir: str = "./cache"
 
     # ArXiv API settings
