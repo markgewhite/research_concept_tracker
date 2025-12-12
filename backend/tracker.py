@@ -51,8 +51,8 @@ class ConceptTracker:
 
         # Embed seed papers
         logger.info("Embedding seed papers")
-        for paper in seed_papers:
-            embedding = self.embedding_service.embed_paper(paper)
+        embeddings = self.embedding_service.embed_papers(seed_papers)
+        for paper, embedding in zip(seed_papers, embeddings):
             paper.embedding = embedding.tolist()
 
         # 2. Initialize Kalman tracker
@@ -102,8 +102,8 @@ class ConceptTracker:
 
             # Embed candidates
             logger.info("Embedding candidate papers")
-            for paper in candidates:
-                embedding = self.embedding_service.embed_paper(paper)
+            embeddings = self.embedding_service.embed_papers(candidates)
+            for paper, embedding in zip(candidates, embeddings):
                 paper.embedding = embedding.tolist()
 
             # Evaluate with Kalman filter

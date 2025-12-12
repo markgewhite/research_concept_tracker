@@ -49,8 +49,8 @@ class EmbeddingService:
         logger.debug(f"Generating embedding for {paper.arxiv_id}")
 
         try:
-            # Generate and normalize embedding
-            embedding = self.model.encode(text, normalize_embeddings=True)
+            # Generate and normalize embedding (disable progress bar for single item)
+            embedding = self.model.encode(text, normalize_embeddings=True, show_progress_bar=False)
 
             # Ensure it's a numpy array
             if not isinstance(embedding, np.ndarray):
@@ -67,35 +67,58 @@ class EmbeddingService:
             logger.error(f"Failed to generate embedding for {paper.arxiv_id}: {e}")
             raise
 
-    def embed_papers(self, papers: list[Paper]) -> np.ndarray:
+    def embed_papers(self, papers: list[Paper]) -> list[np.ndarray]:
         """
-        Batch embed multiple papers (checks cache individually)
+        Batch embed multiple papers (checks cache individually, batches uncached)
 
         Args:
             papers: List of Paper objects
 
         Returns:
-            Array of embeddings (num_papers x embedding_dim)
+            List of embeddings in same order as input papers
         """
         logger.info(f"Embedding {len(papers)} papers")
 
-        embeddings = []
+        embeddings = [None] * len(papers)
+        uncached_indices = []
+        uncached_texts = []
         num_cached = 0
-        num_generated = 0
 
-        for paper in papers:
+        # Check cache for all papers
+        for i, paper in enumerate(papers):
             cached = self.cache.get(paper.arxiv_id)
             if cached is not None:
-                embeddings.append(cached)
+                embeddings[i] = cached
                 num_cached += 1
             else:
-                embedding = self.embed_paper(paper)
-                embeddings.append(embedding)
-                num_generated += 1
+                uncached_indices.append(i)
+                uncached_texts.append(f"{paper.title}\n\n{paper.abstract}")
+
+        # Batch encode uncached papers
+        num_generated = len(uncached_indices)
+        if num_generated > 0:
+            logger.info(f"Generating {num_generated} new embeddings (batch mode)")
+            # Batch encode with single progress bar
+            new_embeddings = self.model.encode(
+                uncached_texts,
+                normalize_embeddings=True,
+                show_progress_bar=True,
+                batch_size=32
+            )
+
+            # Ensure numpy array
+            if not isinstance(new_embeddings, np.ndarray):
+                new_embeddings = np.array(new_embeddings)
+
+            # Store in cache and result list
+            for idx, embedding in zip(uncached_indices, new_embeddings):
+                paper = papers[idx]
+                self.cache.set(paper.arxiv_id, embedding)
+                embeddings[idx] = embedding
 
         logger.info(f"Embeddings complete: {num_cached} from cache, {num_generated} generated")
 
-        return np.array(embeddings)
+        return embeddings
 
     def get_embedding_dim(self) -> int:
         """Get embedding dimension"""
