@@ -2,7 +2,7 @@
 
 import logging
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from backend.models import TrackingRequest, TrackingResponse, TrackingStep, Paper
 from backend.arxiv_client import ArXivClient
 from backend.embedding_service import EmbeddingService
@@ -64,7 +64,12 @@ class ConceptTracker:
         logger.info("Step 3: Tracking through time windows")
         timeline = []
         current_date = max(p.published for p in seed_papers)
+
+        # Parse end_date and make it timezone-aware (UTC) to match ArXiv papers
         end_date = datetime.fromisoformat(request.end_date)
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
         step_number = 0
 
         logger.info(f"Tracking from {current_date.date()} to {end_date.date()}")
