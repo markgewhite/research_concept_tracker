@@ -15,11 +15,15 @@ class Settings(BaseSettings):
     arxiv_max_retries: int = 3
 
     # Kalman Filter - Physics constraints
-    max_velocity: float = 0.15
-    """Maximum concept drift per time step (higher = allows faster concept evolution)"""
+    max_velocity: float = 1.0
+    """Maximum concept drift per time step (higher = allows faster concept evolution)
+    Note: For normalized vectors, velocity ≈ √(2 - 2×similarity)
+    - velocity=1.0 corresponds to similarity ≥ 0.50
+    - velocity=0.8 corresponds to similarity ≥ 0.68"""
 
-    max_acceleration: float = 0.10
-    """Maximum change in velocity (higher = allows more sudden direction changes)"""
+    max_acceleration: float = 0.6
+    """Maximum change in velocity (higher = allows more sudden direction changes)
+    Note: Acceleration check is skipped on first step (when velocity is zero)"""
 
     process_noise: float = 0.01
     """Natural drift/uncertainty in concept position"""

@@ -94,12 +94,18 @@ class KalmanConceptTracker:
             return False, 0.0, f"Velocity {velocity_magnitude:.4f} exceeds max {self.max_velocity}"
 
         # 3. Acceleration check (change in velocity)
-        velocity_change = implied_velocity - self.velocity
-        acceleration = np.linalg.norm(velocity_change)
-        logger.debug(f"Acceleration magnitude: {acceleration:.3f}")
+        # Skip acceleration check on first step (when velocity is still zero)
+        current_velocity_mag = np.linalg.norm(self.velocity)
 
-        if acceleration > self.max_acceleration:
-            return False, 0.0, f"Acceleration {acceleration:.4f} exceeds max {self.max_acceleration}"
+        if current_velocity_mag > 1e-6:  # Not the first step
+            velocity_change = implied_velocity - self.velocity
+            acceleration = np.linalg.norm(velocity_change)
+            logger.debug(f"Acceleration magnitude: {acceleration:.3f}")
+
+            if acceleration > self.max_acceleration:
+                return False, 0.0, f"Acceleration {acceleration:.4f} exceeds max {self.max_acceleration}"
+        else:
+            logger.debug("First step - skipping acceleration check")
 
         # 4. Calculate confidence based on similarity
         if similarity >= self.thresholds['auto_include']:
