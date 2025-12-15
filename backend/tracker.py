@@ -81,7 +81,7 @@ class ConceptTracker:
             if window_end > end_date:
                 window_end = end_date
 
-            logger.info(f"\n{'='*60}")
+            logger.info(f"{'='*60}")
             logger.info(f"STEP {step_number}: {current_date.date()} to {window_end.date()}")
             logger.info(f"{'='*60}")
 
@@ -170,7 +170,7 @@ class ConceptTracker:
             similarity_threshold=request.similarity_threshold
         )
 
-        logger.info(f"\n{'='*80}")
+        logger.info(f"{'='*80}")
         logger.info(f"TRACKING COMPLETE")
         logger.info(f"  Total steps: {len(timeline)}")
         logger.info(f"  Total papers: {total_papers}")
