@@ -127,10 +127,11 @@ class ConceptTracker:
             for paper, sim in zip(accepted_papers, similarities):
                 paper.similarity = sim
 
-            # Count confidence tiers
-            num_high = sum(1 for c in confidences if c > 0.85)
-            num_moderate = sum(1 for c in confidences if 0.75 <= c <= 0.85)
-            num_low = sum(1 for c in confidences if c < 0.75)
+            # Count confidence tiers based on similarity
+            # Using similarity is more intuitive than confidence (which includes penalties)
+            num_high = sum(1 for s in similarities if s >= 0.70)
+            num_moderate = sum(1 for s in similarities if 0.60 <= s < 0.70)
+            num_low = sum(1 for s in similarities if s < 0.60)
 
             step = TrackingStep(
                 step_number=step_number,

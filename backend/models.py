@@ -44,9 +44,9 @@ class TrackingStep(BaseModel):
     concept_vector: list[float] = Field(..., description="Current concept embedding")
     velocity: list[float] = Field(..., description="Rate of concept change (Kalman)")
     avg_similarity: float = Field(..., description="Average similarity of papers to concept")
-    num_high_confidence: int = Field(..., description="Number of papers with similarity > 0.85")
-    num_moderate: int = Field(..., description="Number of papers with similarity 0.75-0.85")
-    num_low: int = Field(..., description="Number of papers with similarity 0.65-0.75")
+    num_high_confidence: int = Field(..., description="Number of papers with similarity >= 0.70")
+    num_moderate: int = Field(..., description="Number of papers with similarity 0.60-0.70")
+    num_low: int = Field(..., description="Number of papers with similarity < 0.60")
 
     class Config:
         json_schema_extra = {
