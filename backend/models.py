@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Optional
 
 
 class Paper(BaseModel):
@@ -12,13 +13,13 @@ class Paper(BaseModel):
     abstract: str
     authors: list[str]
     published: datetime
-    updated: datetime | None = None
+    updated: Optional[datetime] = None
     categories: list[str] = Field(default_factory=list, description="ArXiv categories (e.g., ['cs.LG', 'cs.CL'])")
     pdf_url: str
 
     # Computed fields (populated during tracking)
-    embedding: list[float] | None = Field(None, description="Embedding vector for paper")
-    similarity: float | None = Field(None, description="Similarity to concept vector")
+    embedding: Optional[list[float]] = Field(None, description="Embedding vector for paper")
+    similarity: Optional[float] = Field(None, description="Similarity to concept vector")
 
     class Config:
         json_schema_extra = {

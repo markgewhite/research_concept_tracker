@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: arxiv-concept-tracker
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: master
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+
+    # Environment variables
+    envVars:
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 8000
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ARXIV_RATE_LIMIT
+        value: 3.0
+      - key: ARXIV_MAX_RETRIES
+        value: 3
+      - key: MAX_VELOCITY
+        value: 1.0
+      - key: MAX_ACCELERATION
+        value: 0.6
+      - key: THRESHOLD_AUTO_INCLUDE
+        value: 0.85
+      - key: THRESHOLD_STRONG
+        value: 0.75
+      - key: THRESHOLD_MODERATE
+        value: 0.60
+      - key: THRESHOLD_REJECT
+        value: 0.50
+
+    # Health check
+    healthCheckPath: /health
+
+    # Auto-deploy
+    autoDeploy: true

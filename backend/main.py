@@ -1,8 +1,11 @@
 """FastAPI application for ArXiv Concept Tracker"""
 
 import logging
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from backend.models import TrackingRequest, TrackingResponse, Paper
 from backend.arxiv_client import ArXivClient
 from backend.tracker import ConceptTracker
@@ -34,22 +37,35 @@ app.add_middleware(
 arxiv_client = ArXivClient()
 concept_tracker = ConceptTracker()
 
+# Mount static files for frontend
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+    logger.info(f"Mounted frontend directory: {FRONTEND_DIR}")
+else:
+    logger.warning(f"Frontend directory not found: {FRONTEND_DIR}")
+
 logger.info("FastAPI application initialized")
 
 
 @app.get("/")
 def root():
-    """Root endpoint with API information"""
-    return {
-        "message": "ArXiv Concept Tracker API",
-        "version": "0.1.0",
-        "endpoints": {
-            "/api/search": "Search ArXiv papers by keyword",
-            "/api/track": "Track concept evolution from seed papers",
-            "/api/paper/{arxiv_id}": "Get single paper details"
-        },
-        "docs": "/docs"
-    }
+    """Serve the frontend application"""
+    index_path = FRONTEND_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    else:
+        # Fallback to API information if frontend not available
+        return {
+            "message": "ArXiv Concept Tracker API",
+            "version": "0.1.0",
+            "endpoints": {
+                "/api/search": "Search ArXiv papers by keyword",
+                "/api/track": "Track concept evolution from seed papers",
+                "/api/paper/{arxiv_id}": "Get single paper details"
+            },
+            "docs": "/docs"
+        }
 
 
 @app.get("/api/search")

@@ -4,6 +4,7 @@ import arxiv
 import time
 import logging
 from datetime import datetime
+from typing import Optional
 from backend.models import Paper
 from backend.config import settings
 
@@ -75,8 +76,8 @@ class ArXivClient:
     def search_papers(
         self,
         query: str,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
         max_results: int = 100
     ) -> list[Paper]:
         """

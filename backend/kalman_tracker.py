@@ -2,6 +2,7 @@
 
 import numpy as np
 import logging
+from typing import Optional
 from sklearn.metrics.pairwise import cosine_similarity
 from backend.models import Paper
 from backend.config import settings
@@ -15,8 +16,8 @@ class KalmanConceptTracker:
     def __init__(self):
         """Initialize Kalman tracker with constraints from config"""
         # State vectors
-        self.position: np.ndarray | None = None  # Current concept vector
-        self.velocity: np.ndarray | None = None  # Rate of change
+        self.position: Optional[np.ndarray] = None  # Current concept vector
+        self.velocity: Optional[np.ndarray] = None  # Rate of change
 
         # Physics constraints from config
         self.max_velocity = settings.max_velocity

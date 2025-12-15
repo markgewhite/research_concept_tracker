@@ -4,6 +4,7 @@ import pickle
 import json
 import logging
 from pathlib import Path
+from typing import Optional
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class EmbeddingCache:
         self.metadata_file = self.cache_dir / "metadata.json"
         self.metadata = self._load_metadata()
 
-    def get(self, arxiv_id: str) -> np.ndarray | None:
+    def get(self, arxiv_id: str) -> Optional[np.ndarray]:
         """
         Retrieve cached embedding for a paper
 
