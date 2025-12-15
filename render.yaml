@@ -10,6 +10,8 @@ services:
 
     # Environment variables
     envVars:
+      - key: EMBEDDING_MODEL
+        value: sentence-transformers/all-MiniLM-L6-v2
       - key: API_HOST
         value: 0.0.0.0
       - key: API_PORT

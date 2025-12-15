@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings with Kalman filter parameters"""
 
     # Embedding configuration
-    embedding_model: str = "Qwen/Qwen3-Embedding-0.6B"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     cache_dir: str = "./cache"
 
     # ArXiv API settings
