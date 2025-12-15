@@ -116,7 +116,7 @@ class ConceptTracker:
 
             # Update tracker state
             logger.info("Updating tracker state")
-            tracker.update(accepted)
+            position_drift = tracker.update(accepted)
 
             # Create timeline step
             accepted_papers = [paper for paper, sim, conf, _ in accepted]
@@ -148,7 +148,7 @@ class ConceptTracker:
             timeline.append(step)
 
             logger.info(f"Step complete: {len(accepted_papers)} papers accepted")
-            logger.info(f"  Avg similarity: {step.avg_similarity:.3f}")
+            logger.info(f"  Avg similarity: {step.avg_similarity:.3f}, Position drift: {position_drift:.4f}")
             logger.info(f"  Confidence tiers: High={num_high}, Moderate={num_moderate}, Low={num_low}")
 
             # Move to next window

@@ -191,7 +191,7 @@ class KalmanConceptTracker:
         """
         if not accepted_papers:
             logger.warning("No papers to update with")
-            return
+            return 0.0
 
         if self.position is None:
             raise ValueError("Tracker not initialized")
@@ -231,5 +231,8 @@ class KalmanConceptTracker:
             self.velocity *= (self.max_velocity / velocity_mag)
             logger.debug(f"Clipped velocity from {velocity_mag:.4f} to {self.max_velocity}")
 
+        position_drift = np.linalg.norm(innovation)
         logger.info(f"Updated tracker: velocity_mag={np.linalg.norm(self.velocity):.4f}, num_papers={len(accepted_papers)}")
-        logger.debug(f"Position drift: {np.linalg.norm(innovation):.4f}")
+        logger.info(f"Position drift: {position_drift:.4f}")
+
+        return position_drift
