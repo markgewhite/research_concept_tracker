@@ -1,11 +1,26 @@
-# ArXiv Concept Evolution Tracker - MVP
+---
+title: ArXiv Concept Tracker
+emoji: 📚
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+app_port: 8000
+---
 
-Track how scientific concepts evolve over time using semantic embeddings and physics-inspired Kalman filtering.
+# ArXiv Concept Tracker
+
+Track how research concepts evolve over time using AI-powered semantic embeddings and Kalman filtering.
 
 ## Features
 
+- 🔍 **Search ArXiv papers** by keyword
+- 📊 **Track concept evolution** through time windows
+- 🧠 **Semantic similarity** with embeddings (MiniLM-L6-v2)
+- 📈 **Interactive timeline** visualization
+- 🎯 **Kalman filter** for smooth concept tracking
 - **Linear concept tracking**: Follow concept evolution from seed papers forward through time
-- **Local embeddings**: Qwen3 via sentence-transformers (no API costs)
+- **Local embeddings**: sentence-transformers (no API costs)
 - **Kalman filtering**: Velocity and acceleration constraints prevent unrealistic concept jumps
 - **ArXiv integration**: Automatic paper fetching and metadata extraction
 - **REST API**: FastAPI backend with JSON responses
