@@ -88,7 +88,6 @@ class KalmanConceptTracker:
         # 2. Implied velocity check
         implied_velocity = candidate_vector - self.position
         velocity_magnitude = np.linalg.norm(implied_velocity)
-        logger.debug(f"Velocity magnitude: {velocity_magnitude:.3f}")
 
         if velocity_magnitude > self.max_velocity:
             return False, 0.0, f"Velocity {velocity_magnitude:.4f} exceeds max {self.max_velocity}"
@@ -100,11 +99,11 @@ class KalmanConceptTracker:
         if current_velocity_mag > 1e-6:  # Not the first step
             velocity_change = implied_velocity - self.velocity
             acceleration = np.linalg.norm(velocity_change)
-            logger.debug(f"Acceleration magnitude: {acceleration:.3f}")
 
             if acceleration > self.max_acceleration:
                 return False, 0.0, f"Acceleration {acceleration:.4f} exceeds max {self.max_acceleration}"
         else:
+            acceleration = 0.0
             logger.debug("First step - skipping acceleration check")
 
         # 4. Calculate confidence based on similarity
@@ -176,7 +175,7 @@ class KalmanConceptTracker:
                 logger.debug(f"Valid - confidence: {confidence:.3f}")
                 accepted.append((paper, similarity, confidence, reason))
             else:
-                logger.debug(f"Invalid - confidence: {confidence:.3f}")
+                logger.debug(f"Invalid - confidence: {confidence:.3f} - reason: {reason}")
                 rejected.append((paper, similarity, confidence, reason))
 
         logger.info(f"Processed {len(papers)} papers: {len(accepted)} accepted, {len(rejected)} rejected")
