@@ -140,7 +140,7 @@ class GradioConceptTracker:
             html += f"""
             <div style='border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px;'>
                 <h3>Step {step.step_number}: {step.start_date.strftime('%b %Y')} → {step.end_date.strftime('%b %Y')}</h3>
-                <p><b>{len(step.papers)} papers</b> | Avg similarity: {step.avg_similarity:.3f}</p>
+                <p><b>{len(step.papers)} papers</b> | Avg similarity: {step.avg_similarity:.3f} | Position drift: {step.position_drift:.4f}</p>
 
                 <div style='display: flex; gap: 12px; margin: 12px 0;'>
                     <span style='background: #d1fae5; padding: 4px 8px; border-radius: 4px; color: #000;'>

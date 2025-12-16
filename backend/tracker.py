@@ -152,6 +152,7 @@ class ConceptTracker:
                 concept_vector=tracker.position.tolist(),
                 velocity=tracker.velocity.tolist(),
                 avg_similarity=float(np.mean(similarities)),
+                position_drift=float(position_drift),
                 num_high_confidence=num_high,
                 num_moderate=num_moderate,
                 num_low=num_low
