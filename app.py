@@ -132,7 +132,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         max_papers = gr.Slider(
             minimum=50,
             maximum=2000,
-            value=500,
+            value=50,
             step=50,
             label="Max Papers per Window",
             info="GPU: 500-2000 recommended. CPU: 50-100 max."

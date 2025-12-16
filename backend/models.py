@@ -77,7 +77,7 @@ class TrackingRequest(BaseModel):
                                 description="Time window size in months (default: 6)")
     similarity_threshold: float = Field(0.65, ge=0.0, le=1.0,
                                         description="Minimum similarity threshold (default: 0.65)")
-    max_papers_per_window: int = Field(50, gt=0, le=500,
+    max_papers_per_window: int = Field(50, gt=0, le=2000,
                                         description="Max papers to fetch per window (default: 50)")
 
     class Config:
