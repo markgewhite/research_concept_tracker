@@ -95,7 +95,7 @@ class GradioConceptTracker:
             return "", {}, "❌ Please select at least one seed paper"
 
         try:
-            if progress:
+            if progress is not None:
                 progress(0, desc="Starting tracker...")
 
             # Lazy initialization: Create tracker only when needed
@@ -112,13 +112,13 @@ class GradioConceptTracker:
                 max_papers_per_window=max_papers
             )
 
-            if progress:
+            if progress is not None:
                 progress(0.1, desc="Tracking concept evolution...")
 
             # Execute tracking
             response = self.tracker.track(request)
 
-            if progress:
+            if progress is not None:
                 progress(1.0, desc="Complete!")
 
             # Format results for Gradio
