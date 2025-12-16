@@ -3,9 +3,10 @@ title: ArXiv Concept Tracker
 emoji: 📚
 colorFrom: blue
 colorTo: indigo
-sdk: docker
+sdk: gradio
+sdk_version: 5.10.0
+app_file: app.py
 pinned: false
-app_port: 8000
 ---
 
 # ArXiv Concept Tracker
