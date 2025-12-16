@@ -2,8 +2,8 @@
  * ArXiv Concept Tracker - Frontend Logic
  */
 
-// API Configuration
-const API_BASE = 'http://localhost:8000/api';
+// API Configuration - use relative URL to work both locally and on HuggingFace
+const API_BASE = '/api';
 
 // Application State
 let selectedSeeds = new Set();
