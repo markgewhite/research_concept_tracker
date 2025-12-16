@@ -60,7 +60,6 @@ class GradioConceptTracker:
             rows = []
             for p in papers:
                 rows.append({
-                    "Select": False,
                     "Title": p.title[:80] + "..." if len(p.title) > 80 else p.title,
                     "Authors": ", ".join(p.authors[:3]) + (" et al." if len(p.authors) > 3 else ""),
                     "Year": p.published.year,

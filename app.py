@@ -74,11 +74,18 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         search_status = gr.Textbox(label="Status", interactive=False)
 
         search_results = gr.Dataframe(
-            headers=["Select", "Title", "Authors", "Year", "ArXiv ID"],
-            datatype=["bool", "str", "str", "number", "str"],
-            col_count=(5, "fixed"),
+            headers=["Title", "Authors", "Year", "ArXiv ID"],
+            datatype=["str", "str", "number", "str"],
+            col_count=(4, "fixed"),
+            interactive=False,
+            label="Search Results"
+        )
+
+        seed_selection = gr.CheckboxGroup(
+            label="Select Seed Papers (max 5)",
+            choices=[],
             interactive=True,
-            label="Search Results (click checkbox to select as seed)"
+            info="Choose papers that define your concept"
         )
 
     # Tab 2: Configure tracking
@@ -143,7 +150,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     def handle_search(query, start_year, end_year):
         """Search ArXiv and return results"""
         if not query:
-            return gr.update(), {}, "❌ Please enter a search query"
+            return gr.update(), gr.update(choices=[]), {}, "❌ Please enter a search query"
 
         try:
             df, papers_dict, status = get_tracker().search_papers(
@@ -152,46 +159,60 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
                 end_year=int(end_year) if end_year else None,
                 limit=20
             )
-            return df, papers_dict, status
+
+            # Create checkbox choices (show title + ID for clarity)
+            if papers_dict:
+                choices = [
+                    f"{papers_dict[arxiv_id].title[:60]}... ({arxiv_id})"
+                    for arxiv_id in papers_dict.keys()
+                ]
+            else:
+                choices = []
+
+            return df, gr.update(choices=choices, value=[]), papers_dict, status
         except Exception as e:
             import traceback
             error_msg = f"❌ Error: {str(e)}\n{traceback.format_exc()}"
             print(error_msg)
-            return gr.update(), {}, error_msg
+            return gr.update(), gr.update(choices=[]), {}, error_msg
 
     def clear_years():
         """Clear year filters"""
         return None, None
 
-    def handle_seed_selection(dataframe, current_papers):
-        """Update selected seeds based on dataframe checkboxes"""
-        if dataframe is None or len(dataframe) == 0:
+    def handle_seed_selection(selected_choices, current_papers):
+        """Update selected seeds based on checkbox selection"""
+        if not selected_choices:
             return [], current_papers, gr.update(value=[]), "", ""
 
-        # Extract selected rows (where Select column is True)
+        # Extract ArXiv IDs from choice strings (format: "Title... (arxiv_id)")
+        import re
         selected_ids = []
         selected_rows = []
 
-        for row in dataframe.itertuples(index=False):
-            if row[0]:  # Select column
-                arxiv_id = row[4]  # ArXiv ID column
-                selected_ids.append(arxiv_id)
-                selected_rows.append({
-                    "Title": row[1],
-                    "Authors": row[2],
-                    "Year": row[3],
-                    "ArXiv ID": arxiv_id
-                })
+        for choice in selected_choices:
+            # Extract arxiv_id from "(arxiv_id)" at end of string
+            match = re.search(r'\(([^)]+)\)$', choice)
+            if match:
+                arxiv_id = match.group(1)
+                if arxiv_id in current_papers:
+                    paper = current_papers[arxiv_id]
+                    selected_ids.append(arxiv_id)
+                    selected_rows.append({
+                        "Title": paper.title,
+                        "Authors": ", ".join(paper.authors[:3]) + (" et al." if len(paper.authors) > 3 else ""),
+                        "Year": paper.published.year,
+                        "ArXiv ID": arxiv_id
+                    })
 
         # Validate max 5 seeds
         if len(selected_ids) > 5:
-            return (
-                [],
-                current_papers,
-                gr.update(value=[]),
-                "",
-                "❌ Maximum 5 seed papers allowed. Please deselect some papers."
-            )
+            # Keep only first 5
+            selected_ids = selected_ids[:5]
+            selected_rows = selected_rows[:5]
+            status = "❌ Maximum 5 seed papers allowed. Keeping first 5 selected."
+        else:
+            status = f"✅ Selected {len(selected_ids)} seed paper(s)" if selected_ids else ""
 
         # Auto-calculate end date if seeds selected
         end_date_value = ""
@@ -208,8 +229,6 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             if latest_date:
                 end_date = latest_date + timedelta(days=730)  # +2 years
                 end_date_value = end_date.strftime("%Y-%m-%d")
-
-        status = f"✅ Selected {len(selected_ids)} seed paper(s)" if selected_ids else ""
 
         return (
             selected_ids,
@@ -251,7 +270,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     search_btn.click(
         fn=handle_search,
         inputs=[search_query, start_year, end_year],
-        outputs=[search_results, seed_papers_data, search_status]
+        outputs=[search_results, seed_selection, seed_papers_data, search_status]
     )
 
     clear_year_btn.click(
@@ -259,9 +278,9 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         outputs=[start_year, end_year]
     )
 
-    search_results.change(
+    seed_selection.change(
         fn=handle_seed_selection,
-        inputs=[search_results, seed_papers_data],
+        inputs=[seed_selection, seed_papers_data],
         outputs=[selected_seeds, seed_papers_data, selected_display, end_date, track_status]
     )
 
