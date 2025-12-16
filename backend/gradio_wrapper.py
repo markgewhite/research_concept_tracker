@@ -143,13 +143,13 @@ class GradioConceptTracker:
                 <p><b>{len(step.papers)} papers</b> | Avg similarity: {step.avg_similarity:.3f}</p>
 
                 <div style='display: flex; gap: 12px; margin: 12px 0;'>
-                    <span style='background: #d1fae5; padding: 4px 8px; border-radius: 4px;'>
+                    <span style='background: #d1fae5; padding: 4px 8px; border-radius: 4px; color: #000;'>
                         High (≥0.70): {step.num_high_confidence}
                     </span>
-                    <span style='background: #fef3c7; padding: 4px 8px; border-radius: 4px;'>
+                    <span style='background: #fef3c7; padding: 4px 8px; border-radius: 4px; color: #000;'>
                         Moderate (0.60-0.70): {step.num_moderate}
                     </span>
-                    <span style='background: #fed7aa; padding: 4px 8px; border-radius: 4px;'>
+                    <span style='background: #fed7aa; padding: 4px 8px; border-radius: 4px; color: #000;'>
                         Low (<0.60): {step.num_low}
                     </span>
                 </div>
