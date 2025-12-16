@@ -3,8 +3,15 @@
 import gradio as gr
 from backend.gradio_wrapper import GradioConceptTracker
 
-# Initialize tracker
-tracker = GradioConceptTracker()
+# Lazy initialization - create tracker on first use
+_tracker = None
+
+def get_tracker():
+    """Get or create tracker instance"""
+    global _tracker
+    if _tracker is None:
+        _tracker = GradioConceptTracker()
+    return _tracker
 
 # Custom CSS for better styling
 custom_css = """
@@ -138,13 +145,19 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         if not query:
             return gr.update(), {}, "❌ Please enter a search query"
 
-        df, papers_dict, status = tracker.search_papers(
-            query=query,
-            start_year=int(start_year) if start_year else None,
-            end_year=int(end_year) if end_year else None,
-            limit=20
-        )
-        return df, papers_dict, status
+        try:
+            df, papers_dict, status = get_tracker().search_papers(
+                query=query,
+                start_year=int(start_year) if start_year else None,
+                end_year=int(end_year) if end_year else None,
+                limit=20
+            )
+            return df, papers_dict, status
+        except Exception as e:
+            import traceback
+            error_msg = f"❌ Error: {str(e)}\n{traceback.format_exc()}"
+            print(error_msg)
+            return gr.update(), {}, error_msg
 
     def clear_years():
         """Clear year filters"""
@@ -211,22 +224,28 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         if not seeds:
             return "", 0, 0, 0.0, "❌ Please select at least one seed paper"
 
-        progress(0, desc="Initializing tracker...")
+        try:
+            progress(0, desc="Initializing tracker...")
 
-        timeline_html, results_dict, status = tracker.track_concept(
-            seed_ids=seeds,
-            end_date_str=end_date_str,
-            window_months=int(window_months),
-            max_papers=int(max_papers),
-            progress=progress
-        )
+            timeline_html, results_dict, status = get_tracker().track_concept(
+                seed_ids=seeds,
+                end_date_str=end_date_str,
+                window_months=int(window_months),
+                max_papers=int(max_papers),
+                progress=progress
+            )
 
-        # Extract stats
-        total_papers = results_dict.get("total_papers", 0)
-        num_steps = results_dict.get("num_steps", 0)
-        avg_similarity = results_dict.get("avg_similarity", 0.0)
+            # Extract stats
+            total_papers = results_dict.get("total_papers", 0)
+            num_steps = results_dict.get("num_steps", 0)
+            avg_similarity = results_dict.get("avg_similarity", 0.0)
 
-        return timeline_html, total_papers, num_steps, avg_similarity, status
+            return timeline_html, total_papers, num_steps, avg_similarity, status
+        except Exception as e:
+            import traceback
+            error_msg = f"❌ Tracking failed: {str(e)}\n{traceback.format_exc()}"
+            print(error_msg)
+            return f"<p style='color: red;'>{error_msg}</p>", 0, 0, 0.0, error_msg
 
     # Wire up events
     search_btn.click(
