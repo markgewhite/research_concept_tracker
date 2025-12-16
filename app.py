@@ -132,5 +132,125 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             export_json_btn = gr.Button("📥 Export JSON")
             export_csv_btn = gr.Button("📥 Export CSV")
 
+    # Event handlers
+    def handle_search(query, start_year, end_year):
+        """Search ArXiv and return results"""
+        if not query:
+            return gr.update(), {}, "❌ Please enter a search query"
+
+        df, papers_dict, status = tracker.search_papers(
+            query=query,
+            start_year=int(start_year) if start_year else None,
+            end_year=int(end_year) if end_year else None,
+            limit=20
+        )
+        return df, papers_dict, status
+
+    def clear_years():
+        """Clear year filters"""
+        return None, None
+
+    def handle_seed_selection(dataframe, current_papers):
+        """Update selected seeds based on dataframe checkboxes"""
+        if dataframe is None or len(dataframe) == 0:
+            return [], current_papers, gr.update(value=[]), "", ""
+
+        # Extract selected rows (where Select column is True)
+        selected_ids = []
+        selected_rows = []
+
+        for row in dataframe.itertuples(index=False):
+            if row[0]:  # Select column
+                arxiv_id = row[4]  # ArXiv ID column
+                selected_ids.append(arxiv_id)
+                selected_rows.append({
+                    "Title": row[1],
+                    "Authors": row[2],
+                    "Year": row[3],
+                    "ArXiv ID": arxiv_id
+                })
+
+        # Validate max 5 seeds
+        if len(selected_ids) > 5:
+            return (
+                [],
+                current_papers,
+                gr.update(value=[]),
+                "",
+                "❌ Maximum 5 seed papers allowed. Please deselect some papers."
+            )
+
+        # Auto-calculate end date if seeds selected
+        end_date_value = ""
+        if selected_ids and current_papers:
+            from datetime import datetime, timedelta
+            latest_date = None
+            for arxiv_id in selected_ids:
+                if arxiv_id in current_papers:
+                    paper = current_papers[arxiv_id]
+                    paper_date = paper.published
+                    if latest_date is None or paper_date > latest_date:
+                        latest_date = paper_date
+
+            if latest_date:
+                end_date = latest_date + timedelta(days=730)  # +2 years
+                end_date_value = end_date.strftime("%Y-%m-%d")
+
+        status = f"✅ Selected {len(selected_ids)} seed paper(s)" if selected_ids else ""
+
+        return (
+            selected_ids,
+            current_papers,
+            gr.update(value=selected_rows),
+            end_date_value,
+            status
+        )
+
+    def handle_track(seeds, papers_dict, end_date_str, window_months, max_papers, progress=gr.Progress()):
+        """Track concept evolution"""
+        if not seeds:
+            return "", 0, 0, 0.0, "❌ Please select at least one seed paper"
+
+        progress(0, desc="Initializing tracker...")
+
+        timeline_html, results_dict, status = tracker.track_concept(
+            seed_ids=seeds,
+            end_date_str=end_date_str,
+            window_months=int(window_months),
+            max_papers=int(max_papers),
+            progress=progress
+        )
+
+        # Extract stats
+        total_papers = results_dict.get("total_papers", 0)
+        num_steps = results_dict.get("num_steps", 0)
+        avg_similarity = results_dict.get("avg_similarity", 0.0)
+
+        return timeline_html, total_papers, num_steps, avg_similarity, status
+
+    # Wire up events
+    search_btn.click(
+        fn=handle_search,
+        inputs=[search_query, start_year, end_year],
+        outputs=[search_results, seed_papers_data, search_status]
+    )
+
+    clear_year_btn.click(
+        fn=clear_years,
+        outputs=[start_year, end_year]
+    )
+
+    search_results.change(
+        fn=handle_seed_selection,
+        inputs=[search_results, seed_papers_data],
+        outputs=[selected_seeds, seed_papers_data, selected_display, end_date, track_status]
+    )
+
+    track_btn.click(
+        fn=handle_track,
+        inputs=[selected_seeds, seed_papers_data, end_date, window_months, max_papers],
+        outputs=[timeline_display, stats_total, stats_steps, stats_avg_sim, track_status]
+    )
+
 if __name__ == "__main__":
     app.launch()
