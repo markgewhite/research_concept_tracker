@@ -274,6 +274,76 @@ When concept tracking isn't working as expected:
 - [ ] Compare similarity distribution across steps
 - [ ] Ask an external LLM to review the paper progression
 
+## HuggingFace Spaces Deployment Troubleshooting
+
+### Git Branch Setup
+
+**IMPORTANT**: HuggingFace Spaces deploys from the `main` branch by default, NOT `master`.
+
+If you have both branches:
+```bash
+# Push to HuggingFace's main branch
+git push hf master:main --force
+
+# Or standardize on main everywhere
+git branch -m master main
+git push -u origin main
+git push -u hf main
+git push origin --delete master  # May need to change default branch on GitHub first
+git push hf --delete master
+```
+
+Git remotes:
+```bash
+origin  → GitHub (for version control)
+hf      → HuggingFace (for deployment)
+```
+
+### Browser Cache Issues
+
+**Problem**: After deploying updates, changes don't appear on HuggingFace Spaces.
+
+**Symptoms**:
+- Console shows old code (e.g., `localhost:8000` URLs)
+- Error: "Load failed" or CORS/mixed content errors
+- Server logs show no API requests
+
+**Root Cause**: Browsers (especially Safari) aggressively cache JavaScript files.
+
+**Solutions**:
+
+1. **Safari-specific** (most effective):
+   - Go to **Safari** → **Settings** → **Privacy**
+   - Click **"Manage Website Data..."**
+   - Search for your Space URL (e.g., `markgewhite-research-concept-tracker`)
+   - Select it and click **"Remove"**
+   - Close all tabs and reopen
+
+2. **Hard Refresh** (try first):
+   - Windows/Linux: `Ctrl + Shift + R` or `Ctrl + F5`
+   - Mac: `Cmd + Shift + R`
+
+3. **Private/Incognito Mode** (for testing):
+   - Safari: `Cmd + Shift + N`
+   - Chrome: `Ctrl + Shift + N`
+   - If it works here, it's definitely cache
+
+4. **Verify what's deployed**:
+   ```bash
+   # Check the actual file HuggingFace is serving
+   curl -s https://YOUR-SPACE.hf.space/static/app.js | head -20
+   ```
+
+### Deployment Verification
+
+After pushing to HuggingFace:
+
+1. Watch for yellow "Building" banner on Space page
+2. Check logs tab for build completion (1-3 minutes)
+3. Verify file changes with curl (see above)
+4. Clear browser cache completely
+5. Test in Private/Incognito mode first
+
 ## Contact & Resources
 
 - **arXiv API**: https://arxiv.org/help/api/
