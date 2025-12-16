@@ -113,10 +113,10 @@ class GradioConceptTracker:
             )
 
             if progress is not None:
-                progress(0.1, desc="Tracking concept evolution...")
+                progress(0.1, desc="Initializing tracking...")
 
-            # Execute tracking
-            response = self.tracker.track(request)
+            # Execute tracking with progress callback
+            response = self.tracker.track(request, progress_callback=progress)
 
             if progress is not None:
                 progress(1.0, desc="Complete!")

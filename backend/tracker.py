@@ -22,12 +22,13 @@ class ConceptTracker:
         self.embedding_service = EmbeddingService()
         logger.info("ConceptTracker initialized successfully")
 
-    def track(self, request: TrackingRequest) -> TrackingResponse:
+    def track(self, request: TrackingRequest, progress_callback=None) -> TrackingResponse:
         """
         Execute linear concept tracking from seed papers
 
         Args:
             request: TrackingRequest with seed IDs and parameters
+            progress_callback: Optional callback function(fraction, description) for progress updates
 
         Returns:
             TrackingResponse with linear timeline
@@ -70,6 +71,10 @@ class ConceptTracker:
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
 
+        # Calculate total time range for progress tracking
+        start_date = current_date
+        total_duration = (end_date - start_date).total_seconds()
+
         step_number = 0
 
         logger.info(f"Tracking from {current_date.date()} to {end_date.date()}")
@@ -80,6 +85,12 @@ class ConceptTracker:
 
             if window_end > end_date:
                 window_end = end_date
+
+            # Update progress based on time elapsed
+            if progress_callback is not None:
+                elapsed = (current_date - start_date).total_seconds()
+                progress_fraction = 0.1 + (0.85 * (elapsed / total_duration))  # 10% to 95%
+                progress_callback(progress_fraction, desc=f"Step {step_number}: {current_date.strftime('%b %Y')} → {window_end.strftime('%b %Y')}")
 
             logger.info(f"{'='*60}")
             logger.info(f"STEP {step_number}: {current_date.date()} to {window_end.date()}")
