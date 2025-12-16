@@ -69,27 +69,43 @@ def root():
 
 
 @app.get("/api/search")
-async def search_papers(query: str, limit: int = 20) -> dict:
+async def search_papers(
+    query: str,
+    limit: int = 20,
+    start_year: Optional[int] = None,
+    end_year: Optional[int] = None
+) -> dict:
     """
-    Search ArXiv papers by keyword
+    Search ArXiv papers by keyword with optional year range
 
     Args:
         query: Search query (supports ArXiv query syntax)
         limit: Maximum results to return (default: 20, max: 100)
+        start_year: Optional start year (e.g., 2017)
+        end_year: Optional end year (e.g., 2020)
 
     Returns:
         Dictionary with papers list and total count
 
     Example:
-        GET /api/search?query=transformer&limit=10
+        GET /api/search?query=transformer&limit=10&start_year=2017&end_year=2018
     """
     if limit > 100:
         limit = 100
 
-    logger.info(f"Search request: query='{query}', limit={limit}")
+    # Convert years to datetime if provided
+    start_date = datetime(start_year, 1, 1) if start_year else None
+    end_date = datetime(end_year, 12, 31) if end_year else None
+
+    logger.info(f"Search request: query='{query}', limit={limit}, years={start_year}-{end_year}")
 
     try:
-        papers = arxiv_client.search_papers(query, max_results=limit)
+        papers = arxiv_client.search_papers(
+            query,
+            start_date=start_date,
+            end_date=end_date,
+            max_results=limit
+        )
         logger.info(f"Search returned {len(papers)} papers")
 
         return {

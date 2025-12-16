@@ -24,8 +24,17 @@ async function searchPapers() {
     const resultsDiv = document.getElementById('search-results');
     resultsDiv.innerHTML = '<div class="text-gray-600">Searching ArXiv...</div>';
 
+    // Get year range if specified
+    const startYear = document.getElementById('start-year').value;
+    const endYear = document.getElementById('end-year').value;
+
+    // Build URL with optional year parameters
+    let url = `${API_BASE}/search?query=${encodeURIComponent(query)}&limit=20`;
+    if (startYear) url += `&start_year=${startYear}`;
+    if (endYear) url += `&end_year=${endYear}`;
+
     try {
-        const response = await fetch(`${API_BASE}/search?query=${encodeURIComponent(query)}&limit=20`);
+        const response = await fetch(url);
 
         if (!response.ok) {
             throw new Error(`Search failed: ${response.statusText}`);
@@ -35,7 +44,7 @@ async function searchPapers() {
         const papers = data.papers || [];
 
         if (papers.length === 0) {
-            resultsDiv.innerHTML = '<div class="text-gray-600">No papers found. Try a different query.</div>';
+            resultsDiv.innerHTML = '<div class="text-gray-600">No papers found. Try a different query or adjust the year range.</div>';
             return;
         }
 
@@ -47,6 +56,14 @@ async function searchPapers() {
         showError(`Search failed: ${error.message}`);
         resultsDiv.innerHTML = '';
     }
+}
+
+/**
+ * Clear year range filter
+ */
+function clearYearFilter() {
+    document.getElementById('start-year').value = '';
+    document.getElementById('end-year').value = '';
 }
 
 /**
@@ -117,7 +134,7 @@ function toggleSeed(arxivId, paperData) {
 }
 
 /**
- * Update the selected seeds display
+ * Update the selected seeds display and auto-set tracking end date
  */
 function updateSelectedSeeds() {
     const seedsSection = document.getElementById('seeds-section');
@@ -132,6 +149,23 @@ function updateSelectedSeeds() {
     }
 
     seedsSection.style.display = 'block';
+
+    // Auto-set end date based on latest seed paper + 2 years
+    const latestPaper = Array.from(selectedSeeds)
+        .map(arxivId => window.seedPapers[arxivId])
+        .reduce((latest, paper) => {
+            const paperDate = new Date(paper.published);
+            const latestDate = new Date(latest.published);
+            return paperDate > latestDate ? paper : latest;
+        });
+
+    const latestDate = new Date(latestPaper.published);
+    const endDate = new Date(latestDate);
+    endDate.setFullYear(endDate.getFullYear() + 2);
+
+    // Format as YYYY-MM-DD
+    const endDateStr = endDate.toISOString().split('T')[0];
+    document.getElementById('end-date').value = endDateStr;
 
     selectedSeedsDiv.innerHTML = Array.from(selectedSeeds).map(arxivId => {
         const paper = window.seedPapers[arxivId];

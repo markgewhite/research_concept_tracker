@@ -47,20 +47,50 @@
             <h2 class="text-2xl font-semibold text-gray-800 mb-4">1. Find Seed Papers</h2>
             <p class="text-gray-600 mb-4">Search arXiv for papers that represent the concept you want to track</p>
 
-            <div class="flex gap-2 mb-4">
-                <input
-                    type="text"
-                    id="search-input"
-                    placeholder="e.g., 'attention is all you need', 'diffusion models', 'GPT'"
-                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onkeypress="if(event.key==='Enter') searchPapers()"
-                >
-                <button
-                    onclick="searchPapers()"
-                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-                >
-                    Search
-                </button>
+            <div class="space-y-3 mb-4">
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="e.g., 'attention is all you need', 'diffusion models', 'GPT'"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onkeypress="if(event.key==='Enter') searchPapers()"
+                    >
+                    <button
+                        onclick="searchPapers()"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                    >
+                        Search
+                    </button>
+                </div>
+
+                <!-- Year Range Filter -->
+                <div class="flex gap-2 items-center text-sm">
+                    <label class="text-gray-700 font-medium">Year range (optional):</label>
+                    <input
+                        type="number"
+                        id="start-year"
+                        placeholder="From (e.g., 2017)"
+                        min="1991"
+                        max="2025"
+                        class="w-32 px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <span class="text-gray-500">to</span>
+                    <input
+                        type="number"
+                        id="end-year"
+                        placeholder="To (e.g., 2020)"
+                        min="1991"
+                        max="2025"
+                        class="w-32 px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <button
+                        onclick="clearYearFilter()"
+                        class="px-3 py-1 text-gray-600 hover:text-gray-800 text-xs underline"
+                    >
+                        Clear
+                    </button>
+                </div>
             </div>
 
             <!-- Search Results -->
