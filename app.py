@@ -34,6 +34,12 @@ custom_css = """
     font-size: 16px;
     font-weight: 500;
 }
+/* Force checkboxes to display vertically, one per line */
+#seed_selection label {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+}
 """
 
 with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
@@ -91,7 +97,8 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             label="Select Seed Papers (max 5)",
             choices=[],
             interactive=True,
-            info="Choose papers that define your concept"
+            info="Choose papers that define your concept",
+            elem_id="seed_selection"
         )
 
     # Tab 2: Configure tracking
