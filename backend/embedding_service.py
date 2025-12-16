@@ -7,6 +7,18 @@ from backend.models import Paper
 from backend.config import settings
 from backend.utils.cache import EmbeddingCache
 
+# ZeroGPU support (only active on HuggingFace Spaces)
+try:
+    import spaces
+    HAS_SPACES = True
+except ImportError:
+    HAS_SPACES = False
+    # Mock decorator for local development
+    class spaces:
+        @staticmethod
+        def GPU(fn):
+            return fn
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,9 +79,14 @@ class EmbeddingService:
             logger.error(f"Failed to generate embedding for {paper.arxiv_id}: {e}")
             raise
 
+    @spaces.GPU
     def embed_papers(self, papers: list[Paper]) -> list[np.ndarray]:
         """
-        Batch embed multiple papers (checks cache individually, batches uncached)
+        Batch embed multiple papers (GPU-accelerated on HuggingFace Spaces)
+
+        IMPORTANT: This method is decorated with @spaces.GPU, which:
+        - On HuggingFace Spaces: Runs on free T4 GPU (50-100x faster)
+        - Locally: Runs on CPU (decorator is no-op)
 
         Args:
             papers: List of Paper objects
