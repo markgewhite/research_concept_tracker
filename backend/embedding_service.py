@@ -97,18 +97,29 @@ class EmbeddingService:
         # Batch encode uncached papers
         num_generated = len(uncached_indices)
         if num_generated > 0:
+            total_chars = sum(len(text) for text in uncached_texts)
+            avg_chars = total_chars / len(uncached_texts)
             logger.info(f"Generating {num_generated} new embeddings (batch mode)")
-            # Batch encode with single progress bar
-            new_embeddings = self.model.encode(
-                uncached_texts,
-                normalize_embeddings=True,
-                show_progress_bar=True,
-                batch_size=32
-            )
+            logger.info(f"Text stats: {total_chars:,} total chars, {avg_chars:.0f} avg chars/paper")
+            logger.info(f"Starting model.encode() with batch_size=32...")
+
+            try:
+                # Batch encode with single progress bar
+                new_embeddings = self.model.encode(
+                    uncached_texts,
+                    normalize_embeddings=True,
+                    show_progress_bar=True,
+                    batch_size=32
+                )
+                logger.info(f"model.encode() completed successfully")
+            except Exception as e:
+                logger.error(f"model.encode() failed: {type(e).__name__}: {e}")
+                raise
 
             # Ensure numpy array
             if not isinstance(new_embeddings, np.ndarray):
                 new_embeddings = np.array(new_embeddings)
+                logger.debug(f"Converted embeddings to numpy array")
 
             # Store in cache and result list
             for idx, embedding in zip(uncached_indices, new_embeddings):
