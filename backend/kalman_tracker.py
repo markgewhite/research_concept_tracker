@@ -161,22 +161,22 @@ class KalmanConceptTracker:
                 [embedding]
             )[0][0]
 
-            logger.debug(f"Similarity: {similarity:.3f}")
+            logger.info(f"{paper.arxiv_id}: similarity={similarity:.3f}")
 
             # Quick reject if below threshold
             if similarity < self.thresholds['reject']:
                 rejected.append((paper, similarity, 0.0, "Below similarity threshold"))
-                logger.debug(f"Rejected - below {self.thresholds['reject']:.3f}")
+                logger.info(f"  → REJECTED: similarity {similarity:.3f} < threshold {self.thresholds['reject']:.3f}")
                 continue
 
             # Evaluate with Kalman constraints
             is_valid, confidence, reason = self.evaluate_candidate(embedding)
 
             if is_valid:
-                logger.debug(f"Valid - confidence: {confidence:.3f}")
+                logger.info(f"  → ACCEPTED: confidence={confidence:.3f}")
                 accepted.append((paper, similarity, confidence, reason))
             else:
-                logger.debug(f"Invalid - confidence: {confidence:.3f} - reason: {reason}")
+                logger.info(f"  → REJECTED: {reason} (confidence={confidence:.3f})")
                 rejected.append((paper, similarity, confidence, reason))
 
         logger.info(f"Processed {len(papers)} papers: {len(accepted)} accepted, {len(rejected)} rejected")
