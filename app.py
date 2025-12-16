@@ -198,12 +198,13 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
                 if arxiv_id in current_papers:
                     paper = current_papers[arxiv_id]
                     selected_ids.append(arxiv_id)
-                    selected_rows.append({
-                        "Title": paper.title,
-                        "Authors": ", ".join(paper.authors[:3]) + (" et al." if len(paper.authors) > 3 else ""),
-                        "Year": paper.published.year,
-                        "ArXiv ID": arxiv_id
-                    })
+                    # DataFrame expects list of lists, not list of dicts
+                    selected_rows.append([
+                        paper.title,
+                        ", ".join(paper.authors[:3]) + (" et al." if len(paper.authors) > 3 else ""),
+                        paper.published.year,
+                        arxiv_id
+                    ])
 
         # Validate max 5 seeds
         if len(selected_ids) > 5:
