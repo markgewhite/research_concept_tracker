@@ -87,14 +87,6 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
 
         search_status = gr.Textbox(label="Status", interactive=False)
 
-        search_results = gr.Dataframe(
-            headers=["Title", "Authors", "Year", "ArXiv ID"],
-            datatype=["str", "str", "number", "str"],
-            col_count=(4, "fixed"),
-            interactive=False,
-            label="Search Results"
-        )
-
         seed_selection = gr.CheckboxGroup(
             label="Select Seed Papers (max 5)",
             choices=[],
@@ -164,7 +156,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     def handle_search(query, start_year, end_year):
         """Search ArXiv and return results"""
         if not query:
-            return gr.update(), gr.update(choices=[]), {}, "❌ Please enter a search query"
+            return gr.update(choices=[]), {}, "❌ Please enter a search query"
 
         try:
             df, papers_dict, status = get_tracker().search_papers(
@@ -174,21 +166,27 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
                 limit=20
             )
 
-            # Create checkbox choices (show title + ID for clarity)
+            # Create checkbox choices with format: "{title} ({year}). {authors} [arxiv_id]"
             if papers_dict:
-                choices = [
-                    f"{papers_dict[arxiv_id].title[:60]}... ({arxiv_id})"
-                    for arxiv_id in papers_dict.keys()
-                ]
+                choices = []
+                for arxiv_id, paper in papers_dict.items():
+                    # Format authors
+                    authors = ", ".join(paper.authors[:3])
+                    if len(paper.authors) > 3:
+                        authors += " et al."
+                    
+                    # Format: title (year). authors [arxiv_id]
+                    choice = f"{paper.title} ({paper.published.year}). {authors} [{arxiv_id}]"
+                    choices.append(choice)
             else:
                 choices = []
 
-            return df, gr.update(choices=choices, value=[]), papers_dict, status
+            return gr.update(choices=choices, value=[]), papers_dict, status
         except Exception as e:
             import traceback
             error_msg = f"❌ Error: {str(e)}\n{traceback.format_exc()}"
             print(error_msg)
-            return gr.update(), gr.update(choices=[]), {}, error_msg
+            return gr.update(choices=[]), {}, error_msg
 
     def clear_years():
         """Reset year filters to defaults"""
@@ -199,14 +197,14 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         if not selected_choices:
             return [], current_papers, gr.update(value=[]), "", ""
 
-        # Extract ArXiv IDs from choice strings (format: "Title... (arxiv_id)")
+        # Extract ArXiv IDs from choice strings (format: "Title (year). Authors [arxiv_id]")
         import re
         selected_ids = []
         selected_rows = []
 
         for choice in selected_choices:
-            # Extract arxiv_id from "(arxiv_id)" at end of string
-            match = re.search(r'\(([^)]+)\)$', choice)
+            # Extract arxiv_id from "[arxiv_id]" at end of string
+            match = re.search(r'\[([^\]]+)\]$', choice)
             if match:
                 arxiv_id = match.group(1)
                 if arxiv_id in current_papers:
@@ -285,7 +283,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     search_btn.click(
         fn=handle_search,
         inputs=[search_query, start_year, end_year],
-        outputs=[search_results, seed_selection, seed_papers_data, search_status]
+        outputs=[seed_selection, seed_papers_data, search_status]
     )
 
     clear_year_btn.click(
