@@ -1,7 +1,9 @@
 """FastAPI application for ArXiv Concept Tracker"""
 
 import logging
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
