@@ -66,14 +66,16 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
                 )
             with gr.Column(scale=1):
                 start_year = gr.Number(
-                    label="Start Year (optional)",
+                    label="Start Year",
+                    value=2015,
                     precision=0,
                     minimum=1990,
                     maximum=2025
                 )
             with gr.Column(scale=1):
                 end_year = gr.Number(
-                    label="End Year (optional)",
+                    label="End Year",
+                    value=2020,
                     precision=0,
                     minimum=1990,
                     maximum=2025
@@ -81,7 +83,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
 
         with gr.Row():
             search_btn = gr.Button("🔍 Search ArXiv", variant="primary", size="lg")
-            clear_year_btn = gr.Button("Clear Year Filter", size="sm")
+            clear_year_btn = gr.Button("Reset Years to Default", size="sm")
 
         search_status = gr.Textbox(label="Status", interactive=False)
 
@@ -189,8 +191,8 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             return gr.update(), gr.update(choices=[]), {}, error_msg
 
     def clear_years():
-        """Clear year filters"""
-        return None, None
+        """Reset year filters to defaults"""
+        return 2015, 2020
 
     def handle_seed_selection(selected_choices, current_papers):
         """Update selected seeds based on checkbox selection"""
