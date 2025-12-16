@@ -22,7 +22,9 @@ class GradioConceptTracker:
 
     def __init__(self):
         self.arxiv_client = ArXivClient()
-        self.tracker = ConceptTracker()
+        # Lazy initialization: Don't create ConceptTracker until tracking time
+        # This prevents CUDA initialization during search (HuggingFace ZeroGPU requirement)
+        self.tracker = None
 
     def search_papers(
         self,
@@ -95,6 +97,11 @@ class GradioConceptTracker:
         try:
             if progress:
                 progress(0, desc="Starting tracker...")
+
+            # Lazy initialization: Create tracker only when needed
+            # This ensures model loading happens inside @spaces.GPU decorated function
+            if self.tracker is None:
+                self.tracker = ConceptTracker()
 
             # Build tracking request
             request = TrackingRequest(
