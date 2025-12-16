@@ -15,25 +15,22 @@ Track how research concepts evolve over time using AI-powered semantic embedding
 
 ## Features
 
-- 🔍 **Search ArXiv papers** by keyword
+- 🔍 **Search ArXiv papers** by keyword with optional year filtering
 - 📊 **Track concept evolution** through time windows
-- 🧠 **Semantic similarity** with embeddings (MiniLM-L6-v2)
-- 📈 **Interactive timeline** visualization
-- 🎯 **Kalman filter** for smooth concept tracking
-- **Linear concept tracking**: Follow concept evolution from seed papers forward through time
-- **Local embeddings**: sentence-transformers (no API costs)
-- **Kalman filtering**: Velocity and acceleration constraints prevent unrealistic concept jumps
-- **ArXiv integration**: Automatic paper fetching and metadata extraction
-- **REST API**: FastAPI backend with JSON responses
-- **Comprehensive caching**: Embeddings are cached locally for fast repeated runs
+- 🧠 **Semantic embeddings** using sentence-transformers (MiniLM-L6-v2)
+- 📈 **Interactive timeline** visualization with Gradio
+- 🎯 **Kalman filter** constraints prevent unrealistic concept jumps
+- 💾 **Local embeddings cache** - no API costs
+- 🌐 **Works locally and on HuggingFace Spaces**
 
 ## Quick Start
 
-### Installation
+### Local Installation
 
-1. **Clone or navigate to the project directory**:
+1. **Clone the repository**:
 ```bash
-cd /Users/markgewhite/Documents/MyFiles/Projects/training/ztm/llm_web_apps/concept_tracker
+git clone <your-repo-url>
+cd concept_tracker
 ```
 
 2. **Create and activate virtual environment**:
@@ -48,136 +45,81 @@ pip install -r requirements.txt
 ```
 
 This will install:
-- FastAPI & Uvicorn (web framework)
-- Qwen3 embeddings via sentence-transformers
+- Gradio (web interface)
+- sentence-transformers (embeddings)
 - ArXiv API client
-- NumPy, scikit-learn for computations
-- Pytest for testing
+- NumPy, scikit-learn (computations)
+- Pytest (testing)
 
-**Note**: First run will download the Qwen3 model (~400MB) automatically.
+**Note**: First run will download the embedding model (~400MB) automatically.
 
-### Configuration
-
-The application uses sensible defaults. To customize, copy `.env.example` to `.env` and edit:
+### Run Locally
 
 ```bash
-cp .env.example .env
+python app.py
 ```
 
-Key parameters in `backend/config.py`:
+This will:
+- Start a local server at `http://127.0.0.1:7860`
+- Open the interface in your browser
+- Generate embeddings cache at `cache/embeddings/`
 
-```python
-# Kalman Filter Parameters
-max_velocity = 0.05       # Max concept drift per time step
-max_acceleration = 0.02   # Max change in velocity
-
-# Similarity Thresholds
-threshold_auto_include = 0.85  # High confidence (auto-accept)
-threshold_strong = 0.75        # Moderate confidence
-threshold_moderate = 0.65      # Low confidence (minimum)
-```
-
-## Usage
-
-### Start the Server
+### Get a Public URL (for showcasing)
 
 ```bash
-uvicorn backend.main:app --reload
+python app.py --share
 ```
 
-The API will be available at `http://localhost:8000`
+This generates a temporary public URL (valid for 72 hours) that you can share:
+```
+Running on local URL:  http://127.0.0.1:7860
+Running on public URL: https://abc123xyz.gradio.live  ← Share this!
+```
 
-Interactive API documentation: `http://localhost:8000/docs`
+### Deploy to HuggingFace Spaces (permanent hosting)
 
-### API Endpoints
-
-#### 1. Search Papers
-
-Find potential seed papers:
-
+1. **Create a Space** on [HuggingFace Spaces](https://huggingface.co/spaces)
+2. **Push your code**:
 ```bash
-curl "http://localhost:8000/api/search?query=attention%20is%20all%20you%20need&limit=5"
+git remote add hf https://huggingface.co/spaces/YOUR-USERNAME/concept-tracker
+git push hf main
 ```
 
-#### 2. Get Single Paper
+Your app will be live at: `https://huggingface.co/spaces/YOUR-USERNAME/concept-tracker`
 
-Get details for a specific paper:
+## How to Use
 
-```bash
-curl "http://localhost:8000/api/paper/1706.03762"
-```
+### 1. Search for Seed Papers
 
-#### 3. Track Concept Evolution
+- Enter a search query (e.g., "attention is all you need", "diffusion models")
+- Optionally filter by year range
+- Select 1-5 papers that define your concept
 
-Track a concept from seed papers forward:
+### 2. Configure Tracking
 
-```bash
-curl -X POST "http://localhost:8000/api/track" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "seed_paper_ids": ["1706.03762"],
-    "end_date": "2018-12-31",
-    "window_months": 6,
-    "max_papers_per_window": 50
-  }'
-```
+- **End Date**: How far forward to track (auto-calculated as seed date + 2 years)
+- **Window Size**: Time window for each step (default: 6 months)
+- **Max Papers**: Papers to fetch per window (500-2000 for GPU, 50-100 for CPU)
 
-**Parameters**:
-- `seed_paper_ids`: 1-5 ArXiv IDs to start tracking from
-- `end_date`: End date (ISO format: "YYYY-MM-DD")
-- `window_months`: Time window size (default: 6 months)
-- `max_papers_per_window`: Max papers to fetch per window (default: 50)
+### 3. View Results
 
-### Example: Track Transformer Evolution
-
-```bash
-# Track from "Attention is All You Need" (2017) to end of 2018
-curl -X POST "http://localhost:8000/api/track" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "seed_paper_ids": ["1706.03762"],
-    "end_date": "2018-12-31",
-    "window_months": 6,
-    "similarity_threshold": 0.65,
-    "max_papers_per_window": 50
-  }' | python -m json.tool
-```
-
-**Expected output**:
-```json
-{
-  "seed_papers": [...],
-  "timeline": [
-    {
-      "step_number": 1,
-      "start_date": "2017-06-12T...",
-      "end_date": "2017-12-12T...",
-      "papers": [...],
-      "avg_similarity": 0.78,
-      "num_high_confidence": 12,
-      "num_moderate": 8,
-      "num_low": 3
-    },
-    ...
-  ],
-  "total_papers": 45,
-  "num_steps": 3
-}
-```
+- Timeline showing concept evolution across time windows
+- Papers ranked by similarity to concept
+- Statistics: high/moderate/low confidence counts
 
 ## How It Works
 
 ### Concept Tracking Algorithm
 
-1. **Initialization**: Start with 1-5 seed papers (e.g., "Attention is All You Need")
-2. **Embedding**: Generate semantic embeddings (title + abstract) using Qwen3
+1. **Initialization**: Start with 1-5 seed papers that define your concept
+2. **Embedding**: Generate semantic embeddings (title + abstract) using sentence-transformers
 3. **Time Windows**: Move forward in configurable windows (default: 6 months)
 4. **For each window**:
-   - Fetch candidate papers from ArXiv
+   - Fetch candidate papers from ArXiv (cs.LG, cs.CL, cs.AI)
    - Generate embeddings (cached after first generation)
    - **Kalman Filtering**: Evaluate each paper against physics-inspired constraints:
-     - **Similarity**: Must be > 0.65 to current concept vector
-     - **Velocity**: Change must be < 0.05 (prevents sudden jumps)
+     - **Similarity**: Must be ≥ 0.50 to current concept vector
+     - **Velocity**: Concept drift must be < 0.05 (prevents sudden jumps)
      - **Acceleration**: Change in velocity must be < 0.02 (prevents direction shifts)
    - Accept papers that pass all constraints
    - Update concept vector as weighted mean of accepted papers
@@ -185,20 +127,43 @@ curl -X POST "http://localhost:8000/api/track" \
 
 ### Kalman Filter Validation
 
-The tracker rejects papers that would cause unrealistic concept jumps:
+The tracker uses physics-inspired constraints to reject papers that would cause unrealistic concept jumps:
 
-- **Similarity < 0.65**: Too dissimilar to current concept
+- **Similarity < 0.50**: Too dissimilar to current concept
 - **Velocity > 0.05**: Concept jumping too fast through embedding space
 - **Acceleration > 0.02**: Sudden change in direction
 
-Check logs for rejection reasons:
-```bash
-uvicorn backend.main:app --log-level=debug
+This ensures smooth, realistic concept evolution tracking.
+
+## Configuration
+
+The application uses sensible defaults. To customize, edit `backend/config.py`:
+
+```python
+# Kalman Filter Parameters
+max_velocity = 1.0        # Max concept drift per time step
+max_acceleration = 0.6    # Max change in velocity
+
+# Similarity Thresholds
+threshold_auto_include = 0.85  # High confidence (auto-accept)
+threshold_strong = 0.75        # Strong confidence
+threshold_moderate = 0.60      # Moderate confidence
+threshold_reject = 0.50        # Below this = reject
 ```
 
-## Testing
+### Tuning Tips
 
-### Run Tests
+**Too strict (rejecting true positives)?**
+- Increase `max_velocity` (e.g., 1.5)
+- Increase `max_acceleration` (e.g., 0.8)
+- Lower `threshold_reject` (e.g., 0.45)
+
+**Too loose (accepting false positives)?**
+- Decrease `max_velocity` (e.g., 0.5)
+- Decrease `max_acceleration` (e.g., 0.3)
+- Raise `threshold_reject` (e.g., 0.60)
+
+## Testing
 
 ```bash
 # Run all tests
@@ -207,142 +172,96 @@ pytest tests/ -v
 # Run specific test file
 pytest tests/test_kalman.py -v
 
-# Run slow integration tests (uses real ArXiv data)
-pytest tests/test_api.py -v -s --tb=short
+# Run integration tests (uses real ArXiv data)
+pytest tests/test_arxiv_client.py -v
 ```
-
-### Test Coverage
-
-- `test_arxiv_client.py`: ArXiv API integration
-- `test_kalman.py`: Kalman filter constraints
-- `test_api.py`: FastAPI endpoints
 
 ## Project Structure
 
 ```
 concept_tracker/
+├── app.py                      # Gradio interface
 ├── backend/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI app & endpoints
-│   ├── config.py            # Kalman parameters & settings
-│   ├── models.py            # Pydantic data models
-│   ├── arxiv_client.py      # ArXiv API wrapper
-│   ├── embedding_service.py # Qwen3 embeddings + cache
-│   ├── kalman_tracker.py    # Core tracking algorithm
-│   ├── tracker.py           # Main orchestrator
+│   ├── gradio_wrapper.py       # Gradio event handlers
+│   ├── tracker.py              # Main orchestrator
+│   ├── arxiv_client.py         # ArXiv API wrapper
+│   ├── embedding_service.py    # Embeddings + cache
+│   ├── kalman_tracker.py       # Kalman filter logic
+│   ├── config.py               # Configuration
+│   ├── models.py               # Pydantic data models
 │   └── utils/
-│       ├── __init__.py
-│       └── cache.py         # Pickle-based cache
-├── cache/                   # Embedding storage (auto-created)
-├── tests/                   # Test suite
-├── requirements.txt         # Python dependencies
-├── .env.example            # Configuration template
-└── README.md               # This file
+│       └── cache.py            # Embedding cache
+├── cache/                      # Auto-created embedding cache
+├── tests/                      # Test suite
+├── requirements.txt            # Dependencies
+└── README.md                   # This file
 ```
 
 ## Performance
 
 ### First Run
-- **Time**: 10-15 minutes (one-time embedding generation + download)
-- **Bottleneck**: Qwen3 model download (~400MB) and embedding generation
+- **Time**: 10-15 minutes
+- **Bottleneck**: Model download (~400MB) + initial embedding generation
 
 ### Subsequent Runs (Cached)
 - **Time**: 2-3 minutes
-- **Bottleneck**: ArXiv API queries and Kalman filtering
+- **Bottleneck**: ArXiv API queries + Kalman filtering
 
 ### Optimizations
-- All embeddings are permanently cached in `cache/embeddings/`
-- Cache grows ~4KB per paper (1024 floats × 4 bytes)
-- 10,000 papers = ~40MB cache (acceptable)
+- All embeddings permanently cached in `cache/embeddings/`
+- Cache grows ~4KB per paper
+- 10,000 papers ≈ 40MB cache
 
-## Tuning Kalman Parameters
-
-If tracking results are not satisfactory:
-
-### Too Strict (Rejecting True Positives)
-
-Edit `backend/config.py`:
-```python
-max_velocity = 0.07       # Increase from 0.05
-max_acceleration = 0.03   # Increase from 0.02
-threshold_moderate = 0.60 # Decrease from 0.65
-```
-
-### Too Loose (Accepting False Positives)
-
-Edit `backend/config.py`:
-```python
-max_velocity = 0.03       # Decrease from 0.05
-max_acceleration = 0.01   # Decrease from 0.02
-threshold_moderate = 0.70 # Increase from 0.65
-```
-
-Restart the server after changes:
-```bash
-uvicorn backend.main:app --reload
-```
+### HuggingFace Spaces Performance
+- **Free tier**: CPU-only, 16GB RAM, slower but functional
+- **ZeroGPU option**: Faster inference (requires configuration)
 
 ## Troubleshooting
 
-### Issue: Qwen3 model won't download
+### Model won't download
+**Solution**: Ensure ~1GB free disk space. Model downloads to `~/.cache/huggingface/`
 
-**Solution**: Ensure you have ~1GB free disk space. Model downloads to `~/.cache/huggingface/`
+### ArXiv API errors (429, timeouts)
+**Solution**: Built-in rate limiting (3 sec delay). If errors persist, increase `arxiv_rate_limit` in config.
 
-### Issue: ArXiv API errors (429, timeouts)
-
-**Solution**: The client includes rate limiting (3 sec delay). If you still get errors, increase `arxiv_rate_limit` in config.
-
-### Issue: No papers accepted in tracking
-
+### No papers accepted in tracking
 **Solution**:
-1. Check logs for rejection reasons
-2. Lower `threshold_moderate` in config
+1. Check console logs for rejection reasons
+2. Lower `threshold_reject` in config
 3. Increase `max_velocity` if velocity rejections are common
 
-### Issue: Out of memory during embedding
+### Out of memory
+**Solution**: Reduce `max_papers_per_window` (try 50-100 on CPU, 500-2000 on GPU)
 
-**Solution**: Reduce `max_papers_per_window` in tracking request
+## Example: Track Transformer Evolution
 
-## Validation Example
+1. Search: "attention is all you need"
+2. Select the 2017 paper (arxiv:1706.03762)
+3. Set end date: 2018-12-31
+4. Window: 6 months
+5. Max papers: 500
+6. Click "Track Concept Evolution"
 
-Test with known concept evolution (Transformers 2017-2018):
-
-```bash
-curl -X POST "http://localhost:8000/api/track" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "seed_paper_ids": ["1706.03762"],
-    "end_date": "2018-06-30",
-    "window_months": 6,
-    "max_papers_per_window": 50
-  }'
-```
-
-**Expected**:
-- Should find BERT-related papers (1810.04805)
-- Should find other transformer variants
+**Expected results**:
+- Should find BERT and other transformer variants
 - Should NOT jump to unrelated NLP (pure RNN papers)
-- Similarity should stay above 0.65
+- Similarity should stay above 0.50
 - 2-3 time steps with 10-30 papers each
 
-## Future Enhancements (Post-MVP)
+## Future Enhancements
 
-- ✅ **Linear tracking** (current MVP)
+- ✅ **Linear tracking** (current implementation)
 - 🔲 **Tree branching** with HDBSCAN clustering
-- 🔲 **Web UI** with D3.js visualization
-- 🔲 **Bidirectional tracking** (trace concepts to their origins)
+- 🔲 **Bidirectional tracking** (trace concepts to origins)
 - 🔲 **Multi-signal validation** (citations, author overlap)
+- 🔲 **Export results** to JSON/CSV
 
 ## License
 
-MIT License - See LICENSE file
-
-## Contributing
-
-This is an MVP/prototype. For issues or suggestions, please open an issue on GitHub.
+MIT License
 
 ## Acknowledgments
 
 - ArXiv for open access to research papers
-- Qwen team for the embedding model
-- FastAPI and sentence-transformers communities
+- HuggingFace for sentence-transformers and Spaces hosting
+- Gradio for the web interface framework
