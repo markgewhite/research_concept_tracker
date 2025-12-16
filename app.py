@@ -1,7 +1,19 @@
 """Gradio application for ArXiv Concept Tracker"""
 
+import logging
+import os
 import gradio as gr
 from backend.gradio_wrapper import GradioConceptTracker
+
+# Configure logging
+log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(
+    level=getattr(logging, log_level),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+logger.info(f"Starting ArXiv Concept Tracker with log level: {log_level}")
 
 # Lazy initialization - create tracker on first use
 _tracker = None
