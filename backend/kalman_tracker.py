@@ -19,6 +19,11 @@ class KalmanConceptTracker:
         self.position: Optional[np.ndarray] = None  # Current concept vector
         self.velocity: Optional[np.ndarray] = None  # Rate of change
 
+        # Kalman filter covariances
+        self.position_covariance: Optional[float] = None  # Uncertainty in position estimate (P)
+        self.process_noise = settings.process_noise  # Natural drift uncertainty (Q)
+        self.measurement_noise = settings.measurement_noise  # Embedding measurement uncertainty (R)
+
         # Physics constraints from config
         self.max_velocity = settings.max_velocity
         self.max_acceleration = settings.max_acceleration
@@ -32,6 +37,7 @@ class KalmanConceptTracker:
         }
 
         logger.info(f"Kalman tracker initialized: max_velocity={self.max_velocity}, max_acceleration={self.max_acceleration}")
+        logger.info(f"Kalman noise: process={self.process_noise}, measurement={self.measurement_noise}")
         logger.info(f"Thresholds: auto={self.thresholds['auto_include']}, strong={self.thresholds['strong']}, moderate={self.thresholds['moderate']}")
 
     def initialize(self, seed_papers: list[Paper]) -> None:
@@ -57,8 +63,14 @@ class KalmanConceptTracker:
         # Zero initial velocity
         self.velocity = np.zeros_like(self.position)
 
+        # Initialize covariance (uncertainty) based on seed paper spread
+        # High initial uncertainty if seeds are diverse, low if similar
+        seed_distances = np.linalg.norm(embeddings - self.position, axis=1)
+        self.position_covariance = float(np.mean(seed_distances))
+
         logger.info(f"Initialized with {len(seed_papers)} seeds")
         logger.info(f"Position norm: {np.linalg.norm(self.position):.3f}")
+        logger.info(f"Initial covariance: {self.position_covariance:.4f}")
         logger.debug(f"Position shape: {self.position.shape}")
 
     def evaluate_candidate(self, candidate_vector: np.ndarray) -> tuple[bool, float, str]:
@@ -215,12 +227,26 @@ class KalmanConceptTracker:
         new_position = (embeddings.T @ weights)
         new_position = new_position / np.linalg.norm(new_position)
 
-        # Kalman-style update (blend new measurement with current position)
-        kalman_gain = 0.3  # Blend factor
-        innovation = new_position - self.position
+        # Kalman filter predict step: Add process noise to covariance
+        # This accounts for natural concept drift and uncertainty growth
+        self.position_covariance += self.process_noise
 
+        # Kalman filter update step: Calculate optimal Kalman gain
+        # K = P / (P + R) where P is prediction covariance, R is measurement noise
+        # Higher measurement noise = trust measurements less = lower gain
+        # Higher prediction uncertainty = trust measurements more = higher gain
+        kalman_gain = self.position_covariance / (self.position_covariance + self.measurement_noise)
+
+        # Update position with Kalman-weighted innovation
+        innovation = new_position - self.position
         self.position = self.position + kalman_gain * innovation
         self.position = self.position / np.linalg.norm(self.position)
+
+        # Update covariance: Reduce uncertainty after measurement
+        # P = (1 - K) * P
+        self.position_covariance = (1 - kalman_gain) * self.position_covariance
+
+        logger.debug(f"Kalman gain: {kalman_gain:.3f}, covariance: {self.position_covariance:.4f}")
 
         # Update velocity (smoothed exponential moving average)
         new_velocity = innovation
