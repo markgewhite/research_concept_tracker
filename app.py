@@ -122,20 +122,20 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             with gr.Column():
                 window_months = gr.Slider(
                     minimum=1,
-                    maximum=24,
-                    value=6,
+                    maximum=12,
+                    value=3,
                     step=1,
                     label="Window Size (months)",
-                    info="Time window for each tracking step"
+                    info="Time window for each tracking step (3-month recommended)"
                 )
 
         max_papers = gr.Slider(
             minimum=50,
             maximum=2000,
-            value=50,
+            value=250,
             step=50,
             label="Max Papers per Window",
-            info="GPU: 500-2000 recommended. CPU: 50-100 max."
+            info="Recommended: 250 for 3-month, 500 for 6-month windows"
         )
 
         track_btn = gr.Button("🚀 Track Concept Evolution", variant="primary", size="lg")

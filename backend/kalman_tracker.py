@@ -13,15 +13,24 @@ logger = logging.getLogger(__name__)
 class KalmanConceptTracker:
     """Track concept evolution with velocity and acceleration constraints"""
 
-    def __init__(self):
-        """Initialize Kalman tracker with constraints from config"""
+    def __init__(self, window_months: int = 6):
+        """Initialize Kalman tracker with constraints from config
+
+        Args:
+            window_months: Time window size in months (used to scale process noise)
+        """
         # State vectors
         self.position: Optional[np.ndarray] = None  # Current concept vector
         self.velocity: Optional[np.ndarray] = None  # Rate of change
 
-        # Kalman filter covariances
+        # Kalman filter covariances with auto-scaling based on window size
         self.position_covariance: Optional[float] = None  # Uncertainty in position estimate (P)
-        self.process_noise = settings.process_noise  # Natural drift uncertainty (Q)
+
+        # Scale process noise proportionally to window size
+        # Base: 0.10 for 6-month windows (from config)
+        # Formula: process_noise = base * (window_months / 6)
+        base_process_noise = settings.process_noise
+        self.process_noise = base_process_noise * (window_months / 6.0)
         self.measurement_noise = settings.measurement_noise  # Embedding measurement uncertainty (R)
 
         # Physics constraints from config
@@ -37,7 +46,7 @@ class KalmanConceptTracker:
         }
 
         logger.info(f"Kalman tracker initialized: max_velocity={self.max_velocity}, max_acceleration={self.max_acceleration}")
-        logger.info(f"Kalman noise: process={self.process_noise}, measurement={self.measurement_noise}")
+        logger.info(f"Kalman noise (window={window_months}mo): process={self.process_noise:.3f} (scaled from {base_process_noise}), measurement={self.measurement_noise}")
         logger.info(f"Thresholds: auto={self.thresholds['auto_include']}, strong={self.thresholds['strong']}, moderate={self.thresholds['moderate']}")
 
     def initialize(self, seed_papers: list[Paper]) -> None:

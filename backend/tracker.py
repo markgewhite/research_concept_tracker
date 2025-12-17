@@ -56,9 +56,9 @@ class ConceptTracker:
         for paper, embedding in zip(seed_papers, embeddings):
             paper.embedding = embedding.tolist()
 
-        # 2. Initialize Kalman tracker
+        # 2. Initialize Kalman tracker with window-scaled process noise
         logger.info("Step 2: Initializing Kalman tracker")
-        tracker = KalmanConceptTracker()
+        tracker = KalmanConceptTracker(window_months=request.window_months)
         tracker.initialize(seed_papers)
 
         # 3. Track through time windows
