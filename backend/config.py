@@ -25,11 +25,11 @@ class Settings(BaseSettings):
     """Maximum change in velocity (higher = allows more sudden direction changes)
     Note: Acceleration check is skipped on first step (when velocity is zero)"""
 
-    process_noise: float = 0.01
-    """Natural drift/uncertainty in concept position"""
+    process_noise: float = 0.10
+    """Natural drift/uncertainty in concept position (higher = more adaptive to concept evolution)"""
 
-    measurement_noise: float = 0.1
-    """Uncertainty in embedding measurements"""
+    measurement_noise: float = 0.05
+    """Uncertainty in embedding measurements (accounts for semantic variation, not just CPU/GPU differences)"""
 
     # Similarity thresholds
     threshold_auto_include: float = 0.85
