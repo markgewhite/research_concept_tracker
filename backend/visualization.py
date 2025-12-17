@@ -30,6 +30,9 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
 
     # Add seed papers (step 0)
     for paper in response.seed_papers:
+        if paper.embedding is None:
+            logger.warning(f"Seed paper {paper.arxiv_id} has no embedding, skipping")
+            continue
         all_embeddings.append(paper.embedding)
         all_papers.append(paper)
         all_steps.append(0)
@@ -38,14 +41,22 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     for step in response.timeline:
         concept_vectors.append(step.concept_vector)
         for paper in step.papers:
+            if paper.embedding is None:
+                logger.warning(f"Paper {paper.arxiv_id} in step {step.step_number} has no embedding, skipping")
+                continue
             all_embeddings.append(paper.embedding)
             all_papers.append(paper)
             all_steps.append(step.step_number)
+
+    if len(all_embeddings) == 0:
+        raise ValueError("No papers with embeddings found!")
 
     all_embeddings = np.array(all_embeddings)
     all_steps = np.array(all_steps)
 
     logger.info(f"Collected {len(all_embeddings)} paper embeddings and {len(concept_vectors)} concept vectors")
+    logger.info(f"Embedding shape: {all_embeddings.shape}")
+    logger.info(f"Steps range: {all_steps.min()} to {all_steps.max()}")
 
     # 2. Run t-SNE on all embeddings (papers + concept vectors)
     # Combine for consistent projection
@@ -53,8 +64,16 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     combined = np.vstack([all_embeddings, concept_vectors_array])
 
     logger.info(f"Running t-SNE on {combined.shape[0]} points in {combined.shape[1]}D space")
-    tsne = TSNE(n_components=2, random_state=42, perplexity=min(30, len(combined) - 1))
+
+    # Ensure perplexity is valid (must be < n_samples)
+    perplexity = min(30, max(5, len(combined) - 1))
+    logger.info(f"Using perplexity: {perplexity}")
+
+    tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity)
     embedded = tsne.fit_transform(combined)
+
+    logger.info(f"t-SNE output shape: {embedded.shape}")
+    logger.info(f"t-SNE output range: x=[{embedded[:, 0].min():.2f}, {embedded[:, 0].max():.2f}], y=[{embedded[:, 1].min():.2f}, {embedded[:, 1].max():.2f}]")
 
     # Split back into papers and concept trajectory
     paper_coords = embedded[:len(all_embeddings)]
@@ -81,14 +100,19 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     for i, paper in enumerate(all_papers):
         step = all_steps[i]
         step_label = "Seed" if step == 0 else f"Step {step}"
+        sim_text = f"Similarity: {paper.similarity:.3f}<br>" if hasattr(paper, 'similarity') and paper.similarity is not None else ""
         hover_text = (
             f"<b>{paper.title[:60]}...</b><br>"
             f"{step_label}<br>"
             f"Year: {paper.published.year}<br>"
             f"ArXiv: {paper.arxiv_id}<br>"
-            f"Similarity: {paper.similarity:.3f}" if hasattr(paper, 'similarity') and paper.similarity else ""
+            f"{sim_text}"
         )
         hover_texts.append(hover_text)
+
+    logger.info(f"Creating scatter plot with {len(paper_coords)} points")
+    logger.info(f"X coords range: [{paper_coords[:, 0].min():.2f}, {paper_coords[:, 0].max():.2f}]")
+    logger.info(f"Y coords range: [{paper_coords[:, 1].min():.2f}, {paper_coords[:, 1].max():.2f}]")
 
     fig.add_trace(go.Scatter(
         x=paper_coords[:, 0],
