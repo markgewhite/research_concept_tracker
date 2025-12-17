@@ -15,13 +15,13 @@ class Settings(BaseSettings):
     arxiv_max_retries: int = 3
 
     # Kalman Filter - Physics constraints
-    max_velocity: float = 1.0
+    max_velocity: float = 1.10
     """Maximum concept drift per time step (higher = allows faster concept evolution)
     Note: For normalized vectors, velocity ≈ √(2 - 2×similarity)
     - velocity=1.0 corresponds to similarity ≥ 0.50
     - velocity=0.8 corresponds to similarity ≥ 0.68"""
 
-    max_acceleration: float = 0.6
+    max_acceleration: float = 0.9
     """Maximum change in velocity (higher = allows more sudden direction changes)
     Note: Acceleration check is skipped on first step (when velocity is zero)"""
 
@@ -32,21 +32,21 @@ class Settings(BaseSettings):
     """Uncertainty in embedding measurements"""
 
     # Similarity thresholds
-    threshold_auto_include: float = 0.75
+    threshold_auto_include: float = 0.85
     """Papers above this similarity are auto-accepted with high confidence"""
 
-    threshold_strong: float = 0.65
+    threshold_strong: float = 0.60
     """Papers above this are accepted if they pass velocity checks"""
 
-    threshold_moderate: float = 0.55
+    threshold_moderate: float = 0.50
     """Minimum similarity for consideration (below this = reject)"""
 
-    threshold_reject: float = 0.45
+    threshold_reject: float = 0.40
     """Hard cutoff - papers below this are always rejected"""
 
     # Tracking defaults
     default_window_months: int = 6
-    max_papers_per_window: int = 500
+    max_papers_per_window: int = 2000
 
     # API settings
     api_host: str = "0.0.0.0"
