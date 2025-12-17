@@ -30,9 +30,11 @@ class EmbeddingService:
         logger.info(f"Loading embedding model: {settings.embedding_model}")
 
         try:
-            self.model = SentenceTransformer(settings.embedding_model)
+            # Load model on CPU to avoid CUDA initialization in main process
+            # ZeroGPU will automatically move it to GPU when @spaces.GPU decorated methods are called
+            self.model = SentenceTransformer(settings.embedding_model, device='cpu')
             self.embedding_dim = self.model.get_sentence_embedding_dimension()
-            logger.info(f"Model loaded successfully. Dimension: {self.embedding_dim}")
+            logger.info(f"Model loaded successfully on CPU. Dimension: {self.embedding_dim}")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
             raise
