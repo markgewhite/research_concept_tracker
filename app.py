@@ -150,10 +150,24 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             stats_steps = gr.Number(label="Time Steps", precision=0)
             stats_avg_sim = gr.Number(label="Avg Similarity", precision=3)
 
-        timeline_display = gr.HTML(
-            label="Timeline",
-            value="<p style='color: #666;'>Run tracking to see results...</p>"
-        )
+        with gr.Tab("Timeline"):
+            timeline_display = gr.HTML(
+                label="Timeline",
+                value="<p style='color: #666;'>Run tracking to see results...</p>"
+            )
+
+        with gr.Tab("Visualization"):
+            visualization_plot = gr.Plot(
+                label="t-SNE Concept Evolution",
+                value=None
+            )
+            gr.Markdown("""
+            **How to read this visualization:**
+            - Each dot represents a paper (red = early, blue = late)
+            - Yellow stars show the concept trajectory across steps
+            - Hover over dots to see paper details
+            - Click and drag to pan, scroll to zoom
+            """)
 
         with gr.Row():
             export_json_btn = gr.Button("📥 Export JSON")
@@ -261,12 +275,12 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     def handle_track(seeds, papers_dict, end_date_str, window_months, max_papers, progress=gr.Progress()):
         """Track concept evolution"""
         if not seeds:
-            return "", 0, 0, 0.0, "❌ Please select at least one seed paper"
+            return "", 0, 0, 0.0, "❌ Please select at least one seed paper", None
 
         try:
             progress(0, desc="Initializing tracker...")
 
-            timeline_html, results_dict, status = get_tracker().track_concept(
+            timeline_html, results_dict, status, viz_figure = get_tracker().track_concept(
                 seed_ids=seeds,
                 end_date_str=end_date_str,
                 window_months=int(window_months),
@@ -279,12 +293,12 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             num_steps = results_dict.get("num_steps", 0)
             avg_similarity = results_dict.get("avg_similarity", 0.0)
 
-            return timeline_html, total_papers, num_steps, avg_similarity, status
+            return timeline_html, total_papers, num_steps, avg_similarity, status, viz_figure
         except Exception as e:
             import traceback
             error_msg = f"❌ Tracking failed: {str(e)}\n{traceback.format_exc()}"
             print(error_msg)
-            return f"<p style='color: red;'>{error_msg}</p>", 0, 0, 0.0, error_msg
+            return f"<p style='color: red;'>{error_msg}</p>", 0, 0, 0.0, error_msg, None
 
     # Wire up events
     search_btn.click(
@@ -307,7 +321,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     track_btn.click(
         fn=handle_track,
         inputs=[selected_seeds, seed_papers_data, end_date, window_months, max_papers],
-        outputs=[timeline_display, stats_total, stats_steps, stats_avg_sim, track_status]
+        outputs=[timeline_display, stats_total, stats_steps, stats_avg_sim, track_status, visualization_plot]
     )
 
 if __name__ == "__main__":

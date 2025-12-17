@@ -13,6 +13,7 @@ import pandas as pd
 from backend.arxiv_client import ArXivClient
 from backend.tracker import ConceptTracker
 from backend.models import Paper, TrackingRequest, TrackingResponse
+from backend.visualization import create_tsne_visualization
 
 logger = logging.getLogger(__name__)
 
@@ -84,15 +85,15 @@ class GradioConceptTracker:
         window_months: int,
         max_papers: int,
         progress=None
-    ) -> Tuple[str, Dict, str]:
+    ) -> Tuple[str, Dict, str, object]:
         """
         Track concept evolution (Gradio-friendly)
 
         Returns:
-            (timeline_html, results_dict, status_message)
+            (timeline_html, results_dict, status_message, visualization_figure)
         """
         if not seed_ids:
-            return "", {}, "❌ Please select at least one seed paper"
+            return "", {}, "❌ Please select at least one seed paper", None
 
         try:
             if progress is not None:
@@ -126,11 +127,21 @@ class GradioConceptTracker:
             results_dict = self._format_results_dict(response)
             status = f"✅ Tracked {response.total_papers} papers across {response.num_steps} steps"
 
-            return timeline_html, results_dict, status
+            # Generate t-SNE visualization
+            if progress is not None:
+                progress(0.95, desc="Generating visualization...")
+
+            try:
+                viz_figure = create_tsne_visualization(response)
+            except Exception as viz_error:
+                logger.warning(f"Visualization failed: {viz_error}")
+                viz_figure = None
+
+            return timeline_html, results_dict, status, viz_figure
 
         except Exception as e:
             logger.error(f"Tracking failed: {e}", exc_info=True)
-            return "", {}, f"❌ Tracking failed: {str(e)}"
+            return "", {}, f"❌ Tracking failed: {str(e)}", None
 
     def _format_timeline_html(self, response: TrackingResponse) -> str:
         """Convert TrackingResponse to rich HTML for Gradio display"""
