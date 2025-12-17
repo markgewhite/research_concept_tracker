@@ -7,7 +7,7 @@ from backend.models import Paper
 from backend.config import settings
 from backend.utils.cache import EmbeddingCache
 
-# ZeroGPU support (only active on HuggingFace Spaces)
+# ZeroGPU support (only active on HuggingFace Spaces with GPU)
 try:
     import spaces
     HAS_SPACES = True
@@ -26,22 +26,31 @@ class EmbeddingService:
     """Generate and cache embeddings using local Qwen3 model"""
 
     def __init__(self):
-        """Initialize embedding model and cache"""
-        logger.info(f"Loading embedding model: {settings.embedding_model}")
+        """Initialize embedding service (model loaded lazily on first use)"""
+        logger.info(f"Initializing EmbeddingService (lazy loading for ZeroGPU compatibility)")
 
-        try:
-            # Load model on CPU to avoid CUDA initialization in main process
-            # ZeroGPU will automatically move it to GPU when @spaces.GPU decorated methods are called
-            self.model = SentenceTransformer(settings.embedding_model, device='cpu')
-            self.embedding_dim = self.model.get_sentence_embedding_dimension()
-            logger.info(f"Model loaded successfully on CPU. Dimension: {self.embedding_dim}")
-        except Exception as e:
-            logger.error(f"Failed to load embedding model: {e}")
-            raise
+        # Lazy loading: model loaded on first use inside GPU-decorated function
+        # This ensures GPU is allocated before model loads on HuggingFace ZeroGPU
+        self.model = None
+        self.embedding_dim = None
 
         self.cache = EmbeddingCache(settings.cache_dir)
         cache_stats = self.cache.get_stats()
         logger.info(f"Cache initialized: {cache_stats['num_cached']} embeddings cached ({cache_stats['total_size_mb']:.2f} MB)")
+
+    def _ensure_model_loaded(self):
+        """Load model if not already loaded (works on both HF ZeroGPU and local)"""
+        if self.model is None:
+            logger.info(f"Loading embedding model: {settings.embedding_model}")
+            try:
+                # Load on CPU - ZeroGPU will auto-transfer to GPU when needed
+                # On local machines, this just loads normally
+                self.model = SentenceTransformer(settings.embedding_model, device='cpu')
+                self.embedding_dim = self.model.get_sentence_embedding_dimension()
+                logger.info(f"Model loaded successfully. Dimension: {self.embedding_dim}")
+            except Exception as e:
+                logger.error(f"Failed to load embedding model: {e}")
+                raise
 
     def embed_paper(self, paper: Paper) -> np.ndarray:
         """
@@ -53,6 +62,9 @@ class EmbeddingService:
         Returns:
             Normalized embedding vector
         """
+        # Ensure model is loaded
+        self._ensure_model_loaded()
+
         # Check cache first
         cached = self.cache.get(paper.arxiv_id)
         if cached is not None:
@@ -96,6 +108,9 @@ class EmbeddingService:
         Returns:
             List of embeddings in same order as input papers
         """
+        # Load model inside GPU-decorated function (required for ZeroGPU)
+        self._ensure_model_loaded()
+
         logger.info(f"Embedding {len(papers)} papers")
 
         embeddings = [None] * len(papers)
@@ -152,4 +167,5 @@ class EmbeddingService:
 
     def get_embedding_dim(self) -> int:
         """Get embedding dimension"""
+        self._ensure_model_loaded()
         return self.embedding_dim
