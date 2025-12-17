@@ -11,20 +11,24 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingCache:
-    """Simple pickle-based cache for embeddings"""
+    """Simple pickle-based cache for embeddings with model-aware keys"""
 
-    def __init__(self, cache_dir: str):
+    def __init__(self, cache_dir: str, model_name: str = "default"):
         """
         Initialize embedding cache
 
         Args:
             cache_dir: Directory path for cache storage
+            model_name: Name of the embedding model (used in cache keys)
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
 
         self.embeddings_dir = self.cache_dir / "embeddings"
         self.embeddings_dir.mkdir(exist_ok=True)
+
+        # Sanitize model name for filesystem (replace / with _)
+        self.model_name = model_name.replace("/", "_").replace("\\", "_")
 
         self.metadata_file = self.cache_dir / "metadata.json"
         self.metadata = self._load_metadata()
@@ -39,19 +43,19 @@ class EmbeddingCache:
         Returns:
             Cached embedding vector or None if not found
         """
-        cache_file = self.embeddings_dir / f"{arxiv_id}.pkl"
+        cache_file = self.embeddings_dir / f"{self.model_name}_{arxiv_id}.pkl"
 
         if cache_file.exists():
             try:
                 with open(cache_file, 'rb') as f:
                     embedding = pickle.load(f)
-                logger.debug(f"Cache hit: {arxiv_id}")
+                logger.debug(f"Cache hit: {arxiv_id} (model: {self.model_name})")
                 return embedding
             except Exception as e:
                 logger.warning(f"Failed to load cache for {arxiv_id}: {e}")
                 return None
 
-        logger.debug(f"Cache miss: {arxiv_id}")
+        logger.debug(f"Cache miss: {arxiv_id} (model: {self.model_name})")
         return None
 
     def set(self, arxiv_id: str, embedding: np.ndarray) -> None:
@@ -62,20 +66,22 @@ class EmbeddingCache:
             arxiv_id: ArXiv ID of the paper
             embedding: Embedding vector to cache
         """
-        cache_file = self.embeddings_dir / f"{arxiv_id}.pkl"
+        cache_file = self.embeddings_dir / f"{self.model_name}_{arxiv_id}.pkl"
 
         try:
             with open(cache_file, 'wb') as f:
                 pickle.dump(embedding, f)
 
-            # Update metadata
-            self.metadata[arxiv_id] = {
+            # Update metadata with model-aware key
+            cache_key = f"{self.model_name}_{arxiv_id}"
+            self.metadata[cache_key] = {
+                'model': self.model_name,
                 'dim': len(embedding),
                 'cached_at': str(cache_file.stat().st_mtime)
             }
             self._save_metadata()
 
-            logger.debug(f"Cached embedding: {arxiv_id} (dim={len(embedding)})")
+            logger.debug(f"Cached embedding: {arxiv_id} (model={self.model_name}, dim={len(embedding)})")
         except Exception as e:
             logger.error(f"Failed to cache {arxiv_id}: {e}")
 

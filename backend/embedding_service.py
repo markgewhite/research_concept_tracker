@@ -34,9 +34,10 @@ class EmbeddingService:
         self.model = None
         self.embedding_dim = None
 
-        self.cache = EmbeddingCache(settings.cache_dir)
+        # Model-aware cache (prevents dimension mismatches when switching models)
+        self.cache = EmbeddingCache(settings.cache_dir, model_name=settings.embedding_model)
         cache_stats = self.cache.get_stats()
-        logger.info(f"Cache initialized: {cache_stats['num_cached']} embeddings cached ({cache_stats['total_size_mb']:.2f} MB)")
+        logger.info(f"Cache initialized for model {settings.embedding_model}: {cache_stats['num_cached']} embeddings cached ({cache_stats['total_size_mb']:.2f} MB)")
 
     def _ensure_model_loaded(self):
         """Load model if not already loaded (works on both HF ZeroGPU and local)"""
