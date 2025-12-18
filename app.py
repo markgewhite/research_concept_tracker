@@ -104,6 +104,11 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     3. View timeline of concept evolution with related papers
     """)
 
+    # HuggingFace login for GPU access
+    with gr.Row():
+        gr.Markdown("**Sign in with HuggingFace for faster GPU-accelerated tracking:**")
+        gr.LoginButton()
+
     # State management
     selected_seeds = gr.State(value=[])
     seed_papers_data = gr.State(value={})
