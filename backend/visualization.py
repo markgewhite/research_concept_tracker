@@ -92,6 +92,12 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
         g = 0
         colors.append(f'rgb({r},{g},{b})')
 
+    logger.info(f"Generated {len(colors)} colors for {len(paper_coords)} points. Sample: {colors[:5] if len(colors) >= 5 else colors}")
+
+    if len(colors) != len(paper_coords):
+        logger.error(f"COLOR MISMATCH: {len(colors)} colors but {len(paper_coords)} points!")
+        raise ValueError(f"Color count mismatch: {len(colors)} colors for {len(paper_coords)} points")
+
     # 4. Create plotly figure
     fig = go.Figure()
 
@@ -114,20 +120,44 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     logger.info(f"X coords range: [{paper_coords[:, 0].min():.2f}, {paper_coords[:, 0].max():.2f}]")
     logger.info(f"Y coords range: [{paper_coords[:, 1].min():.2f}, {paper_coords[:, 1].max():.2f}]")
 
-    fig.add_trace(go.Scatter(
-        x=paper_coords[:, 0],
-        y=paper_coords[:, 1],
+    # Convert to lists for better Plotly compatibility
+    x_coords = paper_coords[:, 0].tolist()
+    y_coords = paper_coords[:, 1].tolist()
+
+    # Try using Scattergl for better rendering
+    from plotly.graph_objs import Scattergl
+
+    fig.add_trace(Scattergl(
+        x=x_coords,
+        y=y_coords,
         mode='markers',
         marker=dict(
-            size=8,
+            size=10,
             color=colors,
-            line=dict(width=1, color='white'),
-            opacity=0.7
+            line=dict(width=0.5, color='darkgray'),
+            opacity=0.8
         ),
         text=hover_texts,
         hovertemplate='%{text}<extra></extra>',
-        name='Papers'
+        name='Papers',
+        showlegend=True,
+        visible=True  # Explicitly set visibility
     ))
+
+    logger.info(f"Added scatter trace with {len(paper_coords)} points")
+    logger.info(f"First 3 points: x={paper_coords[:3, 0].tolist()}, y={paper_coords[:3, 1].tolist()}")
+
+    # Check for NaN/Inf values
+    x_valid = np.isfinite(paper_coords[:, 0]).all()
+    y_valid = np.isfinite(paper_coords[:, 1]).all()
+    logger.info(f"Data validity: x_valid={x_valid}, y_valid={y_valid}")
+    if not (x_valid and y_valid):
+        logger.error(f"Invalid values detected in coordinates!")
+        nan_x = np.isnan(paper_coords[:, 0]).sum()
+        nan_y = np.isnan(paper_coords[:, 1]).sum()
+        inf_x = np.isinf(paper_coords[:, 0]).sum()
+        inf_y = np.isinf(paper_coords[:, 1]).sum()
+        logger.error(f"NaN: x={nan_x}, y={nan_y}; Inf: x={inf_x}, y={inf_y}")
 
     # Add concept trajectory as line
     fig.add_trace(go.Scatter(
@@ -141,7 +171,7 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
         name='Concept Trajectory'
     ))
 
-    # 5. Layout
+    # 5. Layout with explicit ranges
     fig.update_layout(
         title={
             'text': 'Concept Evolution Visualization (t-SNE)',
@@ -149,19 +179,42 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             'xanchor': 'center',
             'font': {'size': 18}
         },
-        xaxis_title='t-SNE Dimension 1',
-        yaxis_title='t-SNE Dimension 2',
+        xaxis=dict(
+            title='t-SNE Dimension 1',
+            range=[paper_coords[:, 0].min() - 1, paper_coords[:, 0].max() + 1],
+            showgrid=True,
+            gridcolor='lightgray'
+        ),
+        yaxis=dict(
+            title='t-SNE Dimension 2',
+            range=[paper_coords[:, 1].min() - 1, paper_coords[:, 1].max() + 1],
+            showgrid=True,
+            gridcolor='lightgray'
+        ),
         hovermode='closest',
         width=900,
         height=700,
         showlegend=True,
         legend=dict(x=0.02, y=0.98, bgcolor='rgba(255,255,255,0.8)'),
-        plot_bgcolor='#f8f9fa',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
         font=dict(family='Arial, sans-serif', size=12)
     )
 
-    # Equal aspect ratio
-    fig.update_yaxes(scaleanchor="x", scaleratio=1)
+    logger.info(f"Figure layout set with ranges x=[{paper_coords[:, 0].min() - 1:.2f}, {paper_coords[:, 0].max() + 1:.2f}], y=[{paper_coords[:, 1].min() - 1:.2f}, {paper_coords[:, 1].max() + 1:.2f}]")
+    logger.info(f"Figure has {len(fig.data)} traces")
+
+    # Final verification
+    if len(fig.data) > 0:
+        trace0 = fig.data[0]
+        logger.info(f"Trace 0: type={trace0.type}, mode={trace0.mode}, {len(trace0.x)} points")
+        logger.info(f"Trace 0 marker: size={trace0.marker.size}, opacity={trace0.marker.opacity}")
+
+    # Configure for Gradio display - ensure autosize is off and dimensions are explicit
+    fig.update_layout(
+        autosize=False,
+        template='plotly_white'
+    )
 
     logger.info("Visualization created successfully")
     return fig
