@@ -20,8 +20,6 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     Returns:
         Plotly figure with interactive visualization
     """
-    logger.info("Creating t-SNE visualization")
-
     # 1. Collect all embeddings and metadata
     all_embeddings = []
     all_papers = []
@@ -54,110 +52,93 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     all_embeddings = np.array(all_embeddings)
     all_steps = np.array(all_steps)
 
-    logger.info(f"Collected {len(all_embeddings)} paper embeddings and {len(concept_vectors)} concept vectors")
-    logger.info(f"Embedding shape: {all_embeddings.shape}")
-    logger.info(f"Steps range: {all_steps.min()} to {all_steps.max()}")
-
     # 2. Run t-SNE on all embeddings (papers + concept vectors)
     # Combine for consistent projection
     concept_vectors_array = np.array(concept_vectors)
     combined = np.vstack([all_embeddings, concept_vectors_array])
 
-    logger.info(f"Running t-SNE on {combined.shape[0]} points in {combined.shape[1]}D space")
-
     # Ensure perplexity is valid (must be < n_samples)
-    perplexity = min(30, max(5, len(combined) - 1))
-    logger.info(f"Using perplexity: {perplexity}")
+    perplexity = min(40, max(5, len(combined) - 1))
 
     tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity)
     embedded = tsne.fit_transform(combined)
-
-    logger.info(f"t-SNE output shape: {embedded.shape}")
-    logger.info(f"t-SNE output range: x=[{embedded[:, 0].min():.2f}, {embedded[:, 0].max():.2f}], y=[{embedded[:, 1].min():.2f}, {embedded[:, 1].max():.2f}]")
 
     # Split back into papers and concept trajectory
     paper_coords = embedded[:len(all_embeddings)]
     concept_coords = embedded[len(all_embeddings):]
 
-    logger.info("t-SNE projection complete")
-
-    # 3. Create color scale (red to blue spectrum)
+    # 3. Create color mapping for steps (red to blue spectrum)
     num_steps = len(response.timeline) + 1  # +1 for seed papers
-    colors = []
-    for step in all_steps:
-        # Interpolate from red (step 0) to blue (final step)
+
+    def get_step_color(step):
+        """Get RGB color for a given step"""
         ratio = step / max(num_steps - 1, 1)
         r = int(255 * (1 - ratio))
         b = int(255 * ratio)
         g = 0
-        colors.append(f'rgb({r},{g},{b})')
-
-    logger.info(f"Generated {len(colors)} colors for {len(paper_coords)} points. Sample: {colors[:5] if len(colors) >= 5 else colors}")
-
-    if len(colors) != len(paper_coords):
-        logger.error(f"COLOR MISMATCH: {len(colors)} colors but {len(paper_coords)} points!")
-        raise ValueError(f"Color count mismatch: {len(colors)} colors for {len(paper_coords)} points")
+        return f'rgb({r},{g},{b})'
 
     # 4. Create plotly figure
     fig = go.Figure()
 
-    # Add papers as scatter points
-    hover_texts = []
-    for i, paper in enumerate(all_papers):
-        step = all_steps[i]
-        step_label = "Seed" if step == 0 else f"Step {step}"
-        sim_text = f"Similarity: {paper.similarity:.3f}<br>" if hasattr(paper, 'similarity') and paper.similarity is not None else ""
-        hover_text = (
-            f"<b>{paper.title[:60]}...</b><br>"
-            f"{step_label}<br>"
-            f"Year: {paper.published.year}<br>"
-            f"ArXiv: {paper.arxiv_id}<br>"
-            f"{sim_text}"
-        )
-        hover_texts.append(hover_text)
-
-    logger.info(f"Creating scatter plot with {len(paper_coords)} points")
-    logger.info(f"X coords range: [{paper_coords[:, 0].min():.2f}, {paper_coords[:, 0].max():.2f}]")
-    logger.info(f"Y coords range: [{paper_coords[:, 1].min():.2f}, {paper_coords[:, 1].max():.2f}]")
-
-    # Convert to lists for better Plotly compatibility
-    x_coords = paper_coords[:, 0].tolist()
-    y_coords = paper_coords[:, 1].tolist()
-
-    # Try using Scattergl for better rendering
+    # Use Scattergl for better rendering
     from plotly.graph_objs import Scattergl
 
-    fig.add_trace(Scattergl(
-        x=x_coords,
-        y=y_coords,
-        mode='markers',
-        marker=dict(
-            size=10,
-            color=colors,
-            line=dict(width=0.5, color='darkgray'),
-            opacity=0.8
-        ),
-        text=hover_texts,
-        hovertemplate='%{text}<extra></extra>',
-        name='Papers',
-        showlegend=True,
-        visible=True  # Explicitly set visibility
-    ))
+    # Add papers grouped by step (for proper legend)
+    for step_num in range(num_steps):
+        # Get papers for this step
+        step_mask = all_steps == step_num
+        step_indices = np.where(step_mask)[0]
 
-    logger.info(f"Added scatter trace with {len(paper_coords)} points")
-    logger.info(f"First 3 points: x={paper_coords[:3, 0].tolist()}, y={paper_coords[:3, 1].tolist()}")
+        if len(step_indices) == 0:
+            continue
 
-    # Check for NaN/Inf values
-    x_valid = np.isfinite(paper_coords[:, 0]).all()
-    y_valid = np.isfinite(paper_coords[:, 1]).all()
-    logger.info(f"Data validity: x_valid={x_valid}, y_valid={y_valid}")
-    if not (x_valid and y_valid):
-        logger.error(f"Invalid values detected in coordinates!")
-        nan_x = np.isnan(paper_coords[:, 0]).sum()
-        nan_y = np.isnan(paper_coords[:, 1]).sum()
-        inf_x = np.isinf(paper_coords[:, 0]).sum()
-        inf_y = np.isinf(paper_coords[:, 1]).sum()
-        logger.error(f"NaN: x={nan_x}, y={nan_y}; Inf: x={inf_x}, y={inf_y}")
+        # Get coordinates for this step
+        step_x = paper_coords[step_indices, 0].tolist()
+        step_y = paper_coords[step_indices, 1].tolist()
+
+        # Create hover text for this step
+        step_hover_texts = []
+        for idx in step_indices:
+            paper = all_papers[idx]
+            step_label = "Seed Papers" if step_num == 0 else f"Step {step_num}"
+            sim_text = f"Similarity: {paper.similarity:.3f}<br>" if hasattr(paper, 'similarity') and paper.similarity is not None else ""
+            hover_text = (
+                f"<b>{paper.title[:60]}...</b><br>"
+                f"{step_label}<br>"
+                f"Year: {paper.published.year}<br>"
+                f"ArXiv: {paper.arxiv_id}<br>"
+                f"{sim_text}"
+            )
+            step_hover_texts.append(hover_text)
+
+        # Determine label and color
+        if step_num == 0:
+            label = "Seed Papers"
+        else:
+            # Get date range for this step
+            step_data = response.timeline[step_num - 1]
+            label = f"Step {step_num}: {step_data.start_date.strftime('%b %Y')}"
+
+        color = get_step_color(step_num)
+
+        # Add trace for this step
+        fig.add_trace(Scattergl(
+            x=step_x,
+            y=step_y,
+            mode='markers',
+            marker=dict(
+                size=8,
+                color=color,
+                line=dict(width=0.3, color='rgba(255,255,255,0.5)'),
+                opacity=0.7
+            ),
+            text=step_hover_texts,
+            hovertemplate='%{text}<extra></extra>',
+            name=label,
+            legendgroup=f'step{step_num}',
+            showlegend=True
+        ))
 
     # Add concept trajectory as line
     fig.add_trace(go.Scatter(
@@ -174,7 +155,7 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     # 5. Layout with explicit ranges
     fig.update_layout(
         title={
-            'text': 'Concept Evolution Visualization (t-SNE)',
+            'text': f'Concept Evolution Visualization (t-SNE, perplexity={perplexity})',
             'x': 0.5,
             'xanchor': 'center',
             'font': {'size': 18}
@@ -201,20 +182,10 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
         font=dict(family='Arial, sans-serif', size=12)
     )
 
-    logger.info(f"Figure layout set with ranges x=[{paper_coords[:, 0].min() - 1:.2f}, {paper_coords[:, 0].max() + 1:.2f}], y=[{paper_coords[:, 1].min() - 1:.2f}, {paper_coords[:, 1].max() + 1:.2f}]")
-    logger.info(f"Figure has {len(fig.data)} traces")
-
-    # Final verification
-    if len(fig.data) > 0:
-        trace0 = fig.data[0]
-        logger.info(f"Trace 0: type={trace0.type}, mode={trace0.mode}, {len(trace0.x)} points")
-        logger.info(f"Trace 0 marker: size={trace0.marker.size}, opacity={trace0.marker.opacity}")
-
-    # Configure for Gradio display - ensure autosize is off and dimensions are explicit
+    # Configure for Gradio display
     fig.update_layout(
         autosize=False,
         template='plotly_white'
     )
 
-    logger.info("Visualization created successfully")
     return fig

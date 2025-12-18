@@ -163,9 +163,11 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             )
             gr.Markdown("""
             **How to read this visualization:**
-            - Each dot represents a paper (red = early, blue = late)
+            - Each dot represents a paper, colored by time step (red = early, blue = late)
             - Yellow stars show the concept trajectory across steps
+            - Legend shows each time step with its date range
             - Hover over dots to see paper details
+            - Click legend items to show/hide specific time periods
             - Click and drag to pan, scroll to zoom
             """)
 
