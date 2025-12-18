@@ -40,15 +40,6 @@ custom_css = """
     width: 100% !important;
     margin-bottom: 8px !important;
 }
-/* Fix selected seeds table display */
-#selected_seeds_table {
-    min-height: 100px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-#selected_seeds_table .table-wrap {
-    overflow: visible !important;
-}
 /* Align tracking params row - equal height columns */
 #tracking_params_row {
     align-items: stretch !important;
@@ -58,6 +49,10 @@ custom_css = """
     flex-direction: column !important;
     justify-content: flex-end !important;
 }
+/* --- FIX: Force the DataFrame internal wrapper to have height --- */
+#selected_seeds_table .table-wrap {
+    min-height: 150px !important;
+    display: block !important;
 """
 
 with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
@@ -75,7 +70,8 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     # State management
     selected_seeds = gr.State(value=[])
     seed_papers_data = gr.State(value={})
-
+    formatted_seed_rows = gr.State(value=[])
+    
     # Tab 1: Search for seed papers
     with gr.Tab("1. Find Seed Papers"):
         gr.Markdown("### Search ArXiv for papers that define your concept")
@@ -120,7 +116,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         )
 
     # Tab 2: Configure tracking
-    with gr.Tab("2. Configure Tracking"):
+    with gr.Tab("2. Configure Tracking") as config_tab:
         gr.Markdown("### Configure tracking parameters")
 
         selected_display = gr.Dataframe(
@@ -290,7 +286,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         return (
             selected_ids,
             current_papers,
-            gr.update(value=selected_rows),
+            selected_rows,
             end_date_value,
             status
         )
@@ -335,10 +331,21 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
         outputs=[start_year, end_year]
     )
 
+    # 1. When checkbox changes: Save formatted rows to STATE (don't update UI yet)
     seed_selection.change(
         fn=handle_seed_selection,
         inputs=[seed_selection, seed_papers_data],
-        outputs=[selected_seeds, seed_papers_data, selected_display, end_date, track_status]
+        outputs=[selected_seeds, seed_papers_data, formatted_seed_rows, end_date, track_status]
+    )
+
+    # 2. When user clicks the tab: Load data from STATE into the UI
+    def refresh_table(rows):
+        return rows
+
+    config_tab.select(
+        fn=refresh_table,
+        inputs=[formatted_seed_rows],
+        outputs=[selected_display]
     )
 
     track_btn.click(
