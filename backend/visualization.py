@@ -24,6 +24,7 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     all_embeddings = []
     all_papers = []
     all_steps = []
+    seed_embeddings = []
     concept_vectors = []
 
     # Add seed papers (step 0)
@@ -32,8 +33,14 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             logger.warning(f"Seed paper {paper.arxiv_id} has no embedding, skipping")
             continue
         all_embeddings.append(paper.embedding)
+        seed_embeddings.append(paper.embedding)
         all_papers.append(paper)
         all_steps.append(0)
+
+    # Compute initial concept vector as centroid of seed papers
+    if seed_embeddings:
+        initial_concept = np.mean(seed_embeddings, axis=0)
+        concept_vectors.append(initial_concept)
 
     # Add papers from each step
     for step in response.timeline:
@@ -81,10 +88,24 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     # 4. Create plotly figure
     fig = go.Figure()
 
-    # Use Scattergl for better rendering
-    from plotly.graph_objs import Scattergl
+    # Add concept trajectory FIRST (so it renders underneath markers)
+    # Trajectory starts from seed centroid (index 0) then follows each step
+    # Using go.Scatter for reliable line rendering in Gradio
+    trajectory_labels = ["Seeds"] + [f"Step {i+1}" for i in range(len(concept_coords) - 1)]
+    fig.add_trace(go.Scatter(
+        x=concept_coords[:, 0].tolist(),
+        y=concept_coords[:, 1].tolist(),
+        mode='lines',
+        line=dict(color='black', width=3),
+        text=trajectory_labels,
+        hovertemplate='Concept Trajectory<br>%{text}<extra></extra>',
+        name='Concept Trajectory',
+        showlegend=True,
+        hoverinfo='text'
+    ))
 
     # Add papers grouped by step (for proper legend)
+    # Using go.Scatter for consistency with line trace (avoids WebGL rendering issues in Gradio)
     for step_num in range(num_steps):
         # Get papers for this step
         step_mask = all_steps == step_num
@@ -125,8 +146,8 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
         # Determine marker size (seed papers are 50% bigger)
         marker_size = 12 if step_num == 0 else 8
 
-        # Add trace for this step
-        fig.add_trace(Scattergl(
+        # Add trace for this step using go.Scatter for Gradio compatibility
+        fig.add_trace(go.Scatter(
             x=step_x,
             y=step_y,
             mode='markers',
@@ -143,20 +164,8 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             showlegend=True
         ))
 
-    # Add concept trajectory as line with arrow (use regular Scatter for line rendering)
-    fig.add_trace(go.Scatter(
-        x=concept_coords[:, 0],
-        y=concept_coords[:, 1],
-        mode='lines',
-        line=dict(color='black', width=3),
-        text=[f"Step {i+1}" for i in range(len(concept_coords))],
-        hovertemplate='Concept Trajectory<br>Step %{text}<extra></extra>',
-        name='Concept Trajectory',
-        showlegend=True,
-        hoverinfo='text'
-    ))
-
-    # Add arrow at the end of trajectory
+    # Add arrow marker at the end of trajectory
+    # Using a triangle marker rotated to point in direction of travel
     if len(concept_coords) >= 2:
         # Get last two points for arrow direction
         x_end = concept_coords[-1, 0]
@@ -164,21 +173,25 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
         x_prev = concept_coords[-2, 0]
         y_prev = concept_coords[-2, 1]
 
-        fig.add_annotation(
-            x=x_end,
-            y=y_end,
-            ax=x_prev,
-            ay=y_prev,
-            xref='x',
-            yref='y',
-            axref='x',
-            ayref='y',
-            showarrow=True,
-            arrowhead=2,
-            arrowsize=1.5,
-            arrowwidth=3,
-            arrowcolor='black'
-        )
+        # Calculate angle in degrees for the arrow direction
+        angle_rad = np.arctan2(y_end - y_prev, x_end - x_prev)
+        angle_deg = np.degrees(angle_rad)
+
+        # Add arrow as a rotated triangle marker at the end point
+        fig.add_trace(go.Scatter(
+            x=[x_end],
+            y=[y_end],
+            mode='markers',
+            marker=dict(
+                symbol='triangle-up',
+                size=12,
+                color='black',
+                angle=angle_deg - 90,  # Rotate triangle to point in direction of travel
+            ),
+            hovertemplate='Trajectory End<extra></extra>',
+            name='Trajectory End',
+            showlegend=False
+        ))
 
     # 5. Layout with explicit ranges
     fig.update_layout(
