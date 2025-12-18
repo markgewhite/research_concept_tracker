@@ -49,10 +49,18 @@ custom_css = """
     flex-direction: column !important;
     justify-content: flex-end !important;
 }
-/* --- FIX: Force the DataFrame internal wrapper to have height --- */
+/* --- FIX: Perfect Table Height --- */
 #selected_seeds_table .table-wrap {
-    min-height: 150px !important;
-    display: block !important;
+    /* Safety Floor: Enough for Header + 1 Row + Padding */
+    min-height: 120px !important;
+    
+    /* The Fix: Force the box to grow with content, ignoring the 'squeeze' bug */
+    height: auto !important;
+    
+    /* Cap the height so 5 papers don't take over the whole screen */
+    max-height: 400px !important;
+    overflow-y: auto !important;
+}
 """
 
 with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
