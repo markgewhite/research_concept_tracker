@@ -108,7 +108,6 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     selected_seeds = gr.State(value=[])
     seed_papers_data = gr.State(value={})
     formatted_seed_rows = gr.State(value=[])
-    tracking_response = gr.State(value=None)  # Store TrackingResponse for export
     
     # Tab 1: Search for seed papers
     with gr.Tab("1. Find Seed Papers"):
@@ -230,7 +229,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             export_json_btn = gr.Button("📥 Export JSON")
             export_csv_btn = gr.Button("📥 Export CSV")
 
-        export_file = gr.File(label="Download", visible=False)
+        export_output = gr.HTML(label="Export")
 
     # Event handlers
     def handle_search(query, start_year, end_year):
@@ -334,7 +333,7 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     def handle_track(seeds, papers_dict, end_date_str, window_months, max_papers, progress=gr.Progress()):
         """Track concept evolution"""
         if not seeds:
-            return "", 0, 0, 0.0, "❌ Please select at least one seed paper", None, None
+            return "", 0, 0, 0.0, "❌ Please select at least one seed paper", None
 
         try:
             progress(0, desc="Initializing tracker...")
@@ -352,15 +351,12 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             num_steps = results_dict.get("num_steps", 0)
             avg_similarity = results_dict.get("avg_similarity", 0.0)
 
-            # Get the response object for export
-            response = results_dict.get("response")
-
-            return timeline_html, total_papers, num_steps, avg_similarity, status, viz_figure, response
+            return timeline_html, total_papers, num_steps, avg_similarity, status, viz_figure
         except Exception as e:
             import traceback
             error_msg = f"❌ Tracking failed: {str(e)}\n{traceback.format_exc()}"
             print(error_msg)
-            return f"<p style='color: red;'>{error_msg}</p>", 0, 0, 0.0, error_msg, None, None
+            return f"<p style='color: red;'>{error_msg}</p>", 0, 0, 0.0, error_msg, None
 
     # Wire up events
     search_btn.click(
@@ -394,38 +390,49 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
     track_btn.click(
         fn=handle_track,
         inputs=[selected_seeds, seed_papers_data, end_date, window_months, max_papers],
-        outputs=[timeline_display, stats_total, stats_steps, stats_avg_sim, track_status, visualization_plot, tracking_response]
+        outputs=[timeline_display, stats_total, stats_steps, stats_avg_sim, track_status, visualization_plot]
     )
 
-    # Export handlers
-    def handle_export_json(response):
-        """Export tracking results to JSON"""
-        if response is None:
-            return gr.update(visible=False)
-        file_path = get_tracker().export_json(response)
-        if file_path:
-            return gr.update(value=file_path, visible=True)
-        return gr.update(visible=False)
+    # Export handlers - create HTML download links
+    import base64
+    from datetime import datetime as dt
 
-    def handle_export_csv(response):
-        """Export tracking results to CSV"""
-        if response is None:
-            return gr.update(visible=False)
-        file_path = get_tracker().export_csv(response)
+    def handle_export_json():
+        """Export tracking results to JSON with download link"""
+        file_path = get_tracker().export_json()
         if file_path:
-            return gr.update(value=file_path, visible=True)
-        return gr.update(visible=False)
+            with open(file_path, 'r') as f:
+                content = f.read()
+            b64 = base64.b64encode(content.encode()).decode()
+            filename = f"concept_tracker_{dt.now().strftime('%Y%m%d_%H%M%S')}.json"
+            return f'''<p>✅ JSON ready: <a href="data:application/json;base64,{b64}"
+                download="{filename}" style="color: #2563eb; font-weight: bold;">
+                Click here to download {filename}</a></p>'''
+        return "<p style='color: #dc2626;'>❌ No tracking data. Run tracking first.</p>"
+
+    def handle_export_csv():
+        """Export tracking results to CSV with download link"""
+        file_path = get_tracker().export_csv()
+        if file_path:
+            with open(file_path, 'r') as f:
+                content = f.read()
+            b64 = base64.b64encode(content.encode()).decode()
+            filename = f"concept_tracker_{dt.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            return f'''<p>✅ CSV ready: <a href="data:text/csv;base64,{b64}"
+                download="{filename}" style="color: #2563eb; font-weight: bold;">
+                Click here to download {filename}</a></p>'''
+        return "<p style='color: #dc2626;'>❌ No tracking data. Run tracking first.</p>"
 
     export_json_btn.click(
         fn=handle_export_json,
-        inputs=[tracking_response],
-        outputs=[export_file]
+        inputs=[],
+        outputs=[export_output]
     )
 
     export_csv_btn.click(
         fn=handle_export_csv,
-        inputs=[tracking_response],
-        outputs=[export_file]
+        inputs=[],
+        outputs=[export_output]
     )
 
 if __name__ == "__main__":

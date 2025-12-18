@@ -6,8 +6,6 @@ handling error formatting, progress updates, and state management.
 """
 
 import csv
-import io
-import json
 import logging
 import tempfile
 from datetime import datetime, timedelta
@@ -30,6 +28,8 @@ class GradioConceptTracker:
         # Lazy initialization: Don't create ConceptTracker until tracking time
         # This prevents CUDA initialization during search (HuggingFace ZeroGPU requirement)
         self.tracker = None
+        # Store last tracking response for export functionality
+        self._last_response: Optional[TrackingResponse] = None
 
     def search_papers(
         self,
@@ -126,6 +126,9 @@ class GradioConceptTracker:
             if progress is not None:
                 progress(1.0, desc="Complete!")
 
+            # Store response for export
+            self._last_response = response
+
             # Format results for Gradio
             timeline_html = self._format_timeline_html(response)
             results_dict = self._format_results_dict(response)
@@ -205,21 +208,19 @@ class GradioConceptTracker:
             "response": response
         }
 
-    def export_json(self, response: TrackingResponse) -> Optional[str]:
+    def export_json(self) -> Optional[str]:
         """
-        Export tracking results to JSON file
+        Export last tracking results to JSON file.
 
         Returns:
             Path to temporary JSON file, or None if no data
         """
-        if response is None:
+        if self._last_response is None:
             return None
 
         try:
-            # Use Pydantic's built-in JSON serialization
-            json_data = response.model_dump_json(indent=2)
+            json_data = self._last_response.model_dump_json(indent=2)
 
-            # Write to temp file
             temp_file = tempfile.NamedTemporaryFile(
                 mode='w',
                 suffix='.json',
@@ -236,18 +237,17 @@ class GradioConceptTracker:
             logger.error(f"JSON export failed: {e}")
             return None
 
-    def export_csv(self, response: TrackingResponse) -> Optional[str]:
+    def export_csv(self) -> Optional[str]:
         """
-        Export tracking results to CSV file (flattened paper records)
+        Export last tracking results to CSV file (flattened paper records).
 
         Returns:
             Path to temporary CSV file, or None if no data
         """
-        if response is None:
+        if self._last_response is None:
             return None
 
         try:
-            # Create temp file
             temp_file = tempfile.NamedTemporaryFile(
                 mode='w',
                 suffix='.csv',
@@ -256,27 +256,18 @@ class GradioConceptTracker:
                 newline=''
             )
 
-            # CSV headers
             fieldnames = [
-                'step_number',
-                'step_start_date',
-                'step_end_date',
-                'step_avg_similarity',
-                'step_position_drift',
-                'arxiv_id',
-                'title',
-                'authors',
-                'published',
-                'categories',
-                'similarity',
-                'pdf_url'
+                'step_number', 'step_start_date', 'step_end_date',
+                'step_avg_similarity', 'step_position_drift',
+                'arxiv_id', 'title', 'authors', 'published',
+                'categories', 'similarity', 'pdf_url'
             ]
 
             writer = csv.DictWriter(temp_file, fieldnames=fieldnames)
             writer.writeheader()
 
             # Write seed papers (step 0)
-            for paper in response.seed_papers:
+            for paper in self._last_response.seed_papers:
                 writer.writerow({
                     'step_number': 0,
                     'step_start_date': '',
@@ -293,7 +284,7 @@ class GradioConceptTracker:
                 })
 
             # Write timeline papers
-            for step in response.timeline:
+            for step in self._last_response.timeline:
                 for paper in step.papers:
                     writer.writerow({
                         'step_number': step.step_number,
