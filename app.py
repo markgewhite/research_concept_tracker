@@ -31,7 +31,7 @@ custom_css = """
     font-family: 'Inter', sans-serif;
 }
 .tab-nav button {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
 }
 /* Force checkboxes to display vertically, one per line */
@@ -49,17 +49,46 @@ custom_css = """
     flex-direction: column !important;
     justify-content: flex-end !important;
 }
-/* --- FIX: Perfect Table Height --- */
+
+/* 1. Fix the height/scroll issues (The previous fix) */
 #selected_seeds_table .table-wrap {
-    /* Safety Floor: Enough for Header + 1 Row + Padding */
     min-height: 120px !important;
-    
-    /* The Fix: Force the box to grow with content, ignoring the 'squeeze' bug */
     height: auto !important;
-    
-    /* Cap the height so 5 papers don't take over the whole screen */
     max-height: 400px !important;
     overflow-y: auto !important;
+}
+
+/* 2. Global Table Text Size */
+#selected_seeds_table table {
+    font-size: 13px !important; /* Reduced from default (~15-16px) */
+    line-height: 1.4 !important;
+}
+
+/* 3. Column Width Control */
+
+/* Column 1 (Title) & 2 (Authors): Allow wrapping, ensure they have enough room */
+#selected_seeds_table th:nth-child(1),
+#selected_seeds_table td:nth-child(1),
+#selected_seeds_table th:nth-child(2),
+#selected_seeds_table td:nth-child(2) {
+    white-space: normal !important; /* Allow text to wrap */
+    min-width: 240px;              /* Prevent them from getting too squashed */
+}
+
+/* Column 3 (Year): Keep it tight, NO wrapping */
+#selected_seeds_table th:nth-child(3),
+#selected_seeds_table td:nth-child(3) {
+    white-space: nowrap !important;
+    width: 1%;                     /* Shrink to fit content */
+    min-width: 80px;
+}
+
+/* Column 4 (ArXiv ID): Keep it tight, NO wrapping */
+#selected_seeds_table th:nth-child(4),
+#selected_seeds_table td:nth-child(4) {
+    white-space: nowrap !important;
+    width: 1%;                     /* Shrink to fit content */
+    min-width: 110px;
 }
 """
 
