@@ -19,8 +19,10 @@ Track how research concepts evolve over time using AI-powered semantic embedding
 - 📊 **Track concept evolution** through time windows
 - 🧠 **Semantic embeddings** using sentence-transformers (MiniLM-L6-v2)
 - 📈 **Interactive timeline** visualization with Gradio
+- 🗺️ **t-SNE visualization** showing concept trajectory through embedding space
 - 🎯 **Kalman filter** constraints prevent unrealistic concept jumps
 - 💾 **Local embeddings cache** - no API costs
+- 📥 **Export results** to JSON or CSV
 - 🌐 **Works locally and on HuggingFace Spaces**
 
 ## Quick Start
@@ -103,9 +105,10 @@ Your app will be live at: `https://huggingface.co/spaces/YOUR-USERNAME/concept-t
 
 ### 3. View Results
 
-- Timeline showing concept evolution across time windows
-- Papers ranked by similarity to concept
-- Statistics: high/moderate/low confidence counts
+- **Timeline**: Concept evolution across time windows with expandable paper lists
+- **Visualization**: t-SNE plot showing concept trajectory through embedding space
+- **Statistics**: Total papers, time steps, and high/moderate/low confidence counts
+- **Export**: Download results as JSON (full data) or CSV (flattened paper records)
 
 ## How It Works
 
@@ -182,11 +185,12 @@ pytest tests/test_arxiv_client.py -v
 concept_tracker/
 ├── app.py                      # Gradio interface
 ├── backend/
-│   ├── gradio_wrapper.py       # Gradio event handlers
+│   ├── gradio_wrapper.py       # Gradio event handlers + export
 │   ├── tracker.py              # Main orchestrator
 │   ├── arxiv_client.py         # ArXiv API wrapper
 │   ├── embedding_service.py    # Embeddings + cache
 │   ├── kalman_tracker.py       # Kalman filter logic
+│   ├── visualization.py        # t-SNE visualization
 │   ├── config.py               # Configuration
 │   ├── models.py               # Pydantic data models
 │   └── utils/
@@ -254,7 +258,7 @@ concept_tracker/
 - 🔲 **Tree branching** with HDBSCAN clustering
 - 🔲 **Bidirectional tracking** (trace concepts to origins)
 - 🔲 **Multi-signal validation** (citations, author overlap)
-- 🔲 **Export results** to JSON/CSV
+- ✅ **Export results** to JSON/CSV
 
 ## License
 
