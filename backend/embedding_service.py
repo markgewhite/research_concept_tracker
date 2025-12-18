@@ -13,11 +13,35 @@ try:
     HAS_SPACES = True
 except ImportError:
     HAS_SPACES = False
-    # Mock decorator for local development
-    class spaces:
-        @staticmethod
-        def GPU(fn):
-            return fn
+    spaces = None
+
+
+def gpu_decorator(fn):
+    """
+    GPU decorator that falls back to CPU if ZeroGPU quota exhausted.
+
+    On HuggingFace Spaces: Tries GPU first, falls back to CPU on quota errors.
+    Locally: Just runs the function (no GPU decorator needed).
+    """
+    if not HAS_SPACES or spaces is None:
+        # Local development - no decorator needed
+        return fn
+
+    # Wrap with spaces.GPU but catch quota errors
+    gpu_fn = spaces.GPU(fn)
+
+    def wrapper(*args, **kwargs):
+        try:
+            return gpu_fn(*args, **kwargs)
+        except Exception as e:
+            error_msg = str(e).lower()
+            if 'quota' in error_msg or 'zerogpu' in error_msg or 'unlogged' in error_msg:
+                logger.warning(f"ZeroGPU quota exhausted, falling back to CPU: {e}")
+                # Fall back to CPU (call original function without GPU decorator)
+                return fn(*args, **kwargs)
+            raise  # Re-raise other exceptions
+
+    return wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -94,13 +118,13 @@ class EmbeddingService:
             logger.error(f"Failed to generate embedding for {paper.arxiv_id}: {e}")
             raise
 
-    @spaces.GPU
+    @gpu_decorator
     def embed_papers(self, papers: list[Paper]) -> list[np.ndarray]:
         """
         Batch embed multiple papers (GPU-accelerated on HuggingFace Spaces)
 
-        IMPORTANT: This method is decorated with @spaces.GPU, which:
-        - On HuggingFace Spaces: Runs on free T4 GPU (50-100x faster)
+        Uses @gpu_decorator which:
+        - On HuggingFace Spaces: Tries GPU first, falls back to CPU if quota exhausted
         - Locally: Runs on CPU (decorator is no-op)
 
         Args:
