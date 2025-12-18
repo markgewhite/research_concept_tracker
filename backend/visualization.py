@@ -122,13 +122,16 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             label = step_data.start_date.strftime('%b %Y')
             color = get_step_color(step_num)
 
+        # Determine marker size (seed papers are 50% bigger)
+        marker_size = 12 if step_num == 0 else 8
+
         # Add trace for this step
         fig.add_trace(Scattergl(
             x=step_x,
             y=step_y,
             mode='markers',
             marker=dict(
-                size=8,
+                size=marker_size,
                 color=color,
                 line=dict(width=0.3, color='rgba(255,255,255,0.5)'),
                 opacity=0.7
@@ -140,16 +143,17 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             showlegend=True
         ))
 
-    # Add concept trajectory as line with arrow
+    # Add concept trajectory as line with arrow (use regular Scatter for line rendering)
     fig.add_trace(go.Scatter(
         x=concept_coords[:, 0],
         y=concept_coords[:, 1],
         mode='lines',
-        line=dict(color='black', width=2),
+        line=dict(color='black', width=3),
         text=[f"Step {i+1}" for i in range(len(concept_coords))],
         hovertemplate='Concept Trajectory<br>Step %{text}<extra></extra>',
         name='Concept Trajectory',
-        showlegend=True
+        showlegend=True,
+        hoverinfo='text'
     ))
 
     # Add arrow at the end of trajectory
@@ -172,7 +176,7 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             showarrow=True,
             arrowhead=2,
             arrowsize=1.5,
-            arrowwidth=2,
+            arrowwidth=3,
             arrowcolor='black'
         )
 
@@ -201,18 +205,18 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
         height=700,
         showlegend=True,
         legend=dict(
-            x=1.02,
-            y=1,
-            xanchor='left',
-            yanchor='top',
-            bgcolor='rgba(255,255,255,0.8)',
+            x=0.98,
+            y=0.02,
+            xanchor='right',
+            yanchor='bottom',
+            bgcolor='rgba(255,255,255,0.9)',
             bordercolor='lightgray',
             borderwidth=1
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
         font=dict(family='Arial, sans-serif', size=12),
-        margin=dict(l=80, r=150, t=80, b=80)  # Right margin for legend
+        margin=dict(l=80, r=80, t=80, b=80)
     )
 
     # Configure for Gradio display
