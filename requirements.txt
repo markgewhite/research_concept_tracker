@@ -1,5 +1,5 @@
 # Core dependencies
-gradio
+gradio==5.16.0
 sentence-transformers
 arxiv
 pandas
