@@ -40,6 +40,24 @@ custom_css = """
     width: 100% !important;
     margin-bottom: 8px !important;
 }
+/* Fix selected seeds table display */
+#selected_seeds_table {
+    min-height: 100px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+#selected_seeds_table .table-wrap {
+    overflow: visible !important;
+}
+/* Align tracking params row - equal height columns */
+#tracking_params_row {
+    align-items: stretch !important;
+}
+#tracking_params_row > div {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+}
 """
 
 with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
@@ -109,34 +127,36 @@ with gr.Blocks(title="ArXiv Concept Tracker", css=custom_css) as app:
             headers=["Title", "Authors", "Year", "ArXiv ID"],
             datatype=["str", "str", "number", "str"],
             label="Selected Seed Papers",
-            interactive=False
+            interactive=False,
+            wrap=True,
+            elem_id="selected_seeds_table"
         )
 
-        with gr.Row():
-            with gr.Column():
+        with gr.Row(elem_id="tracking_params_row"):
+            with gr.Column(scale=2):
                 end_date = gr.Textbox(
                     label="End Date (YYYY-MM-DD)",
                     placeholder="Auto-calculated based on seeds",
                     info="Tracker will follow concept evolution until this date"
                 )
-            with gr.Column():
+            with gr.Column(scale=2):
                 window_months = gr.Slider(
                     minimum=1,
                     maximum=12,
                     value=3,
                     step=1,
                     label="Window Size (months)",
-                    info="Time window for each tracking step (3-month recommended)"
+                    info="Time window for each tracking step"
                 )
-
-        max_papers = gr.Slider(
-            minimum=50,
-            maximum=2000,
-            value=250,
-            step=50,
-            label="Max Papers per Window",
-            info="Recommended: 250 for 3-month, 500 for 6-month windows"
-        )
+            with gr.Column(scale=3):
+                max_papers = gr.Slider(
+                    minimum=50,
+                    maximum=2000,
+                    value=250,
+                    step=50,
+                    label="Max Papers per Window",
+                    info="Recommended: 250 for 3-month windows"
+                )
 
         track_btn = gr.Button("🚀 Track Concept Evolution", variant="primary", size="lg")
         track_status = gr.Textbox(label="Status", interactive=False)
