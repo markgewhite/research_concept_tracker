@@ -5,7 +5,11 @@ This module provides simplified interfaces for Gradio event handlers,
 handling error formatting, progress updates, and state management.
 """
 
+import csv
+import io
+import json
 import logging
+import tempfile
 from datetime import datetime, timedelta
 from typing import Optional, Tuple, List, Dict
 import pandas as pd
@@ -200,3 +204,116 @@ class GradioConceptTracker:
             "window_months": response.window_months,
             "response": response
         }
+
+    def export_json(self, response: TrackingResponse) -> Optional[str]:
+        """
+        Export tracking results to JSON file
+
+        Returns:
+            Path to temporary JSON file, or None if no data
+        """
+        if response is None:
+            return None
+
+        try:
+            # Use Pydantic's built-in JSON serialization
+            json_data = response.model_dump_json(indent=2)
+
+            # Write to temp file
+            temp_file = tempfile.NamedTemporaryFile(
+                mode='w',
+                suffix='.json',
+                prefix='concept_tracker_',
+                delete=False
+            )
+            temp_file.write(json_data)
+            temp_file.close()
+
+            logger.info(f"Exported JSON to {temp_file.name}")
+            return temp_file.name
+
+        except Exception as e:
+            logger.error(f"JSON export failed: {e}")
+            return None
+
+    def export_csv(self, response: TrackingResponse) -> Optional[str]:
+        """
+        Export tracking results to CSV file (flattened paper records)
+
+        Returns:
+            Path to temporary CSV file, or None if no data
+        """
+        if response is None:
+            return None
+
+        try:
+            # Create temp file
+            temp_file = tempfile.NamedTemporaryFile(
+                mode='w',
+                suffix='.csv',
+                prefix='concept_tracker_',
+                delete=False,
+                newline=''
+            )
+
+            # CSV headers
+            fieldnames = [
+                'step_number',
+                'step_start_date',
+                'step_end_date',
+                'step_avg_similarity',
+                'step_position_drift',
+                'arxiv_id',
+                'title',
+                'authors',
+                'published',
+                'categories',
+                'similarity',
+                'pdf_url'
+            ]
+
+            writer = csv.DictWriter(temp_file, fieldnames=fieldnames)
+            writer.writeheader()
+
+            # Write seed papers (step 0)
+            for paper in response.seed_papers:
+                writer.writerow({
+                    'step_number': 0,
+                    'step_start_date': '',
+                    'step_end_date': '',
+                    'step_avg_similarity': '',
+                    'step_position_drift': '',
+                    'arxiv_id': paper.arxiv_id,
+                    'title': paper.title,
+                    'authors': '; '.join(paper.authors),
+                    'published': paper.published.strftime('%Y-%m-%d'),
+                    'categories': '; '.join(paper.categories),
+                    'similarity': paper.similarity if paper.similarity else '',
+                    'pdf_url': paper.pdf_url
+                })
+
+            # Write timeline papers
+            for step in response.timeline:
+                for paper in step.papers:
+                    writer.writerow({
+                        'step_number': step.step_number,
+                        'step_start_date': step.start_date.strftime('%Y-%m-%d'),
+                        'step_end_date': step.end_date.strftime('%Y-%m-%d'),
+                        'step_avg_similarity': f'{step.avg_similarity:.4f}',
+                        'step_position_drift': f'{step.position_drift:.4f}',
+                        'arxiv_id': paper.arxiv_id,
+                        'title': paper.title,
+                        'authors': '; '.join(paper.authors),
+                        'published': paper.published.strftime('%Y-%m-%d'),
+                        'categories': '; '.join(paper.categories),
+                        'similarity': f'{paper.similarity:.4f}' if paper.similarity else '',
+                        'pdf_url': paper.pdf_url
+                    })
+
+            temp_file.close()
+            logger.info(f"Exported CSV to {temp_file.name}")
+            return temp_file.name
+
+        except Exception as e:
+            logger.error(f"CSV export failed: {e}")
+            return None
