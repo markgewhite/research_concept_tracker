@@ -115,12 +115,12 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
         # Determine label and color
         if step_num == 0:
             label = "Seed Papers"
+            color = 'rgb(0,0,0)'  # Black for seed papers
         else:
             # Get date range for this step
             step_data = response.timeline[step_num - 1]
-            label = f"Step {step_num}: {step_data.start_date.strftime('%b %Y')}"
-
-        color = get_step_color(step_num)
+            label = step_data.start_date.strftime('%b %Y')
+            color = get_step_color(step_num)
 
         # Add trace for this step
         fig.add_trace(Scattergl(
@@ -140,17 +140,41 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             showlegend=True
         ))
 
-    # Add concept trajectory as line
+    # Add concept trajectory as line with arrow
     fig.add_trace(go.Scatter(
         x=concept_coords[:, 0],
         y=concept_coords[:, 1],
-        mode='lines+markers',
-        line=dict(color='black', width=3, dash='solid'),
-        marker=dict(size=12, color='yellow', symbol='star', line=dict(width=2, color='black')),
+        mode='lines',
+        line=dict(color='black', width=2),
         text=[f"Step {i+1}" for i in range(len(concept_coords))],
-        hovertemplate='Concept Position<br>Step %{text}<extra></extra>',
-        name='Concept Trajectory'
+        hovertemplate='Concept Trajectory<br>Step %{text}<extra></extra>',
+        name='Concept Trajectory',
+        showlegend=True
     ))
+
+    # Add arrow at the end of trajectory
+    if len(concept_coords) >= 2:
+        # Get last two points for arrow direction
+        x_end = concept_coords[-1, 0]
+        y_end = concept_coords[-1, 1]
+        x_prev = concept_coords[-2, 0]
+        y_prev = concept_coords[-2, 1]
+
+        fig.add_annotation(
+            x=x_end,
+            y=y_end,
+            ax=x_prev,
+            ay=y_prev,
+            xref='x',
+            yref='y',
+            axref='x',
+            ayref='y',
+            showarrow=True,
+            arrowhead=2,
+            arrowsize=1.5,
+            arrowwidth=2,
+            arrowcolor='black'
+        )
 
     # 5. Layout with explicit ranges
     fig.update_layout(
@@ -173,18 +197,27 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
             gridcolor='lightgray'
         ),
         hovermode='closest',
-        width=900,
+        width=1000,
         height=700,
         showlegend=True,
-        legend=dict(x=0.02, y=0.98, bgcolor='rgba(255,255,255,0.8)'),
+        legend=dict(
+            x=1.02,
+            y=1,
+            xanchor='left',
+            yanchor='top',
+            bgcolor='rgba(255,255,255,0.8)',
+            bordercolor='lightgray',
+            borderwidth=1
+        ),
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font=dict(family='Arial, sans-serif', size=12)
+        font=dict(family='Arial, sans-serif', size=12),
+        margin=dict(l=80, r=150, t=80, b=80)  # Right margin for legend
     )
 
     # Configure for Gradio display
     fig.update_layout(
-        autosize=False,
+        autosize=True,
         template='plotly_white'
     )
 
