@@ -77,7 +77,7 @@ def create_tsne_visualization(response: TrackingResponse) -> go.Figure:
     # 3. Create color mapping for steps (red to blue spectrum)
     num_steps = len(response.timeline) + 1  # +1 for seed papers
 
-    def get_step_color(step):
+    def get_step_color(step: int) -> str:
         """Get RGB color for a given step"""
         ratio = step / max(num_steps - 1, 1)
         r = int(255 * (1 - ratio))

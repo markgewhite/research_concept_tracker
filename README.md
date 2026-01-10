@@ -113,6 +113,36 @@ Your app will be live at: `https://huggingface.co/spaces/YOUR-USERNAME/concept-t
 
 ## How It Works
 
+### Architecture
+
+```mermaid
+flowchart LR
+    subgraph Input
+        A[ArXiv API]
+    end
+
+    subgraph Processing
+        B[Paper Fetching]
+        C[Embedding Generation]
+        D[Kalman Tracking]
+    end
+
+    subgraph Output
+        E[Visualization]
+    end
+
+    subgraph Storage
+        F[(Embedding Cache)]
+    end
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+
+    C <--> F
+```
+
 ### Concept Tracking Algorithm
 
 1. **Initialization**: Start with 1-5 seed papers that define your concept
